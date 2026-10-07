@@ -138,6 +138,31 @@ input[type=range]{width:100%;accent-color:var(--green)}
 .qr{width:196px;height:196px;padding:8px;background:#fff;border-radius:10px;border:1px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;color:#5b6a5e;font-size:12px;text-align:center}
 .qr img,.qr canvas{display:block;width:180px;height:180px}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-all}
+.secs{display:flex;flex-direction:column;gap:10px;min-width:0}
+.sec-tools{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-inline:4px}
+details.sec{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
+details.sec[open]{border-color:color-mix(in srgb,var(--green) 35%,var(--line))}
+details.sec summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:12px;align-items:center;padding:14px 16px;user-select:none}
+details.sec summary::-webkit-details-marker{display:none}
+details.sec summary:hover{background:var(--surface-2)}
+details.sec summary:focus-visible{outline:2px solid var(--green);outline-offset:-2px}
+.sec-t{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.04em;text-transform:uppercase;grid-column:1;grid-row:1}
+.sec-s{grid-column:1;grid-row:2;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;gap:6px;align-items:center;min-width:0}
+.sec-s .sw{width:12px;height:12px;border-radius:3px;border:1px solid var(--line);flex:none}
+.chev{grid-column:2;grid-row:1/3;color:var(--muted);transition:transform .2s}
+details.sec[open] .chev{transform:rotate(180deg)}
+.sec-b{padding:4px 16px 18px;display:flex;flex-direction:column;gap:14px;border-top:1px solid var(--line);padding-top:16px}
+.imgrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.imgname{font:700 12px var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);flex:0 0 72px}
+.val{font-weight:700;color:var(--green);letter-spacing:0;text-transform:none;margin-left:4px}
+.switch{display:inline-flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;position:relative}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch span{width:38px;height:22px;border-radius:22px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.switch span::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.switch input:checked + span{background:var(--green)}
+.switch input:checked + span::after{transform:translateX(16px)}
+.switch input:focus-visible + span{outline:2px solid var(--green);outline-offset:2px}
+.switch input:disabled + span{opacity:.5}
 .savebar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15;width:min(680px,calc(100% - 32px));display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(10,30,15,.18),0 2px 6px rgba(10,30,15,.10);animation:sbIn .2s ease-out}
 .savebar .sb-txt{display:flex;flex-direction:column;min-width:0;font-size:13px;color:var(--muted)}
 .savebar .sb-txt b{color:var(--ink);font-size:14.5px}
@@ -280,100 +305,137 @@ body.has-savebar .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
   <section id="view-mod" class="grid2" hidden>
     <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
       <div class="notice warn" id="modRO" hidden>Só quem tem acesso de edição pode alterar o modelo. Você pode ver como está configurado.</div>
-      <div class="panel" id="modForm">
-        <h2>Tamanho e folha</h2>
-        <div class="row">
-          <button class="chip" data-preset="86x54">RG / cartão 86×54</button>
-          <button class="chip" data-preset="95x60">Maior 95×60</button>
-          <button class="chip" data-preset="100x70">Crachá 100×70</button>
-        </div>
-        <div class="fields">
-          <div><label class="lbl" for="c_w">Largura do cartão (mm)</label><input id="c_w" type="number" min="40" max="140" step="0.5" data-k="card.w"></div>
-          <div><label class="lbl" for="c_h">Altura do cartão (mm)</label><input id="c_h" type="number" min="30" max="100" step="0.5" data-k="card.h"></div>
-          <div><label class="lbl" for="c_gap">Espaço entre cartões (mm)</label><input id="c_gap" type="number" min="0" max="15" step="0.5" data-k="card.gap"></div>
-          <div><label class="lbl" for="c_m">Margem da folha (mm)</label><input id="c_m" type="number" min="3" max="20" step="0.5" data-k="card.margin"></div>
-          <label class="checkline full"><input type="checkbox" id="c_cut" data-k="card.cut"> Imprimir contorno de corte e linha de dobra</label>
-        </div>
-        <p class="hint" id="modFit"></p>
-
-        <h2>Cores</h2>
-        <div class="colors">
-          <label class="color"><input type="color" id="k_border" data-k="colors.border"> Borda</label>
-          <label class="color"><input type="color" id="k_panel" data-k="colors.panel"> Fundo</label>
-          <label class="color"><input type="color" id="k_label" data-k="colors.label"> Rótulos e versículo</label>
-          <label class="color"><input type="color" id="k_text" data-k="colors.text"> Texto</label>
-        </div>
-
-        <h2>Imagens</h2>
-        <div class="row">
-          <span class="lbl" style="flex:0 0 120px;margin:0">Logo</span>
-          <label class="btn small file-btn">Enviar logo<input id="logoIn" type="file" accept="image/*"></label>
-          <button class="btn small" id="logoRm" type="button">Remover</button>
-          <span class="hint" id="logoTxt">Sem logo.</span>
-        </div>
-        <div class="row">
-          <span class="lbl" style="flex:0 0 120px;margin:0">Digital</span>
-          <label class="btn small file-btn">Enviar imagem<input id="fingerIn" type="file" accept="image/*"></label>
-          <button class="btn small" id="fingerRm" type="button">Usar a padrão</button>
-          <span class="hint" id="fingerTxt">Digital com cruz padrão.</span>
-        </div>
-        <p class="hint">Prefira PNG com fundo transparente. Sem logo, a prévia mostra “Seu logo aqui”, e na impressão o espaço fica em branco.</p>
-
-        <h2>Marca d'água</h2>
-        <div class="fields">
-          <label class="checkline"><input type="checkbox" id="w_b" data-k="wm.back"> No verso</label>
-          <label class="checkline"><input type="checkbox" id="w_f" data-k="wm.front"> Na frente</label>
-          <div><label class="lbl" for="w_o">Intensidade</label><input id="w_o" type="range" min="0.04" max="0.25" step="0.01" data-k="wm.opacity"></div>
-          <label class="checkline"><input type="checkbox" id="w_m" data-k="wm.mono"> Na cor dos rótulos (fica mais com cara de documento)</label>
-        </div>
-        <div class="row">
-          <span class="lbl" style="flex:0 0 120px;margin:0">Imagem</span>
-          <label class="btn small file-btn">Usar outra imagem<input id="wmIn" type="file" accept="image/*"></label>
-          <button class="btn small" id="wmRm" type="button">Usar o logo</button>
-          <span class="hint" id="wmTxt">Usa o logo enviado.</span>
-        </div>
-        <p class="hint" id="wmHint"></p>
-
-        <h2>Frente</h2>
-        <div class="fields">
-          <div class="full"><label class="lbl" for="t_fh">Faixa do topo</label><input id="t_fh" type="text" data-k="front.header"></div>
-          <div class="full"><label class="lbl" for="t_fv">Versículo</label><textarea id="t_fv" data-k="front.verse"></textarea></div>
-          <div><label class="lbl" for="t_fr">Referência</label><input id="t_fr" type="text" data-k="front.ref"></div>
-          <div><label class="lbl" for="t_fl">Rótulo da assinatura</label><input id="t_fl" type="text" data-k="front.signLabel"></div>
-          <div><label class="lbl" for="t_sf">Assinatura (menina)</label><input id="t_sf" type="text" data-k="front.signF"></div>
-          <div><label class="lbl" for="t_sm">Assinatura (menino)</label><input id="t_sm" type="text" data-k="front.signM"></div>
-          <div class="full"><label class="lbl" for="t_ff">Faixa de baixo</label><input id="t_ff" type="text" data-k="front.footer"></div>
-          <label class="checkline full"><input type="checkbox" id="t_fp" data-k="front.finger"> Mostrar digital com a cruz</label>
-        </div>
-
-        <h2>Verso</h2>
-        <p class="hint">Use <b>{nome}</b> para o nome da criança e <b>{filho}</b> para Filho/Filha.</p>
-        <div class="fields">
-          <div class="full"><label class="lbl" for="t_bh">Faixa do topo</label><input id="t_bh" type="text" data-k="back.header"></div>
-        </div>
-        <div id="bfields" style="display:flex;flex-direction:column;gap:8px"></div>
-        <button class="btn small" id="addField" type="button" style="align-self:flex-start">+ Adicionar campo</button>
-        <div class="fields">
-          <div><label class="lbl" for="t_bs">Assinatura</label><input id="t_bs" type="text" data-k="back.sign"></div>
-          <div><label class="lbl" for="t_bl">Rótulo da assinatura</label><input id="t_bl" type="text" data-k="back.signLabel"></div>
-          <div class="full"><label class="lbl" for="t_bf">Faixa de baixo (opcional)</label><input id="t_bf" type="text" data-k="back.footer"></div>
-          <label class="checkline full"><input type="checkbox" id="t_mz" data-k="back.mrzOn"> Faixa estilo passaporte no rodapé</label>
-          <div class="full"><label class="lbl" for="t_m1">Linha 1 da faixa</label><input id="t_m1" type="text" data-k="back.mrz1" class="mono"></div>
-          <div class="full"><label class="lbl" for="t_m2">Linha 2 da faixa</label><input id="t_m2" type="text" data-k="back.mrz2" class="mono"></div>
-          <p class="hint full" style="margin-top:-4px">Acentos e espaços viram letras simples e “&lt;”, como no passaporte. {nome} e {filho} funcionam aqui também.</p>
-          <label class="checkline full"><input type="checkbox" id="t_qr" data-k="back.qrOn"> QR code no verso</label>
-          <div class="full"><label class="lbl" for="t_qu">Link do QR code</label><input id="t_qu" type="text" inputmode="url" placeholder="https://instagram.com/suaigreja" data-k="back.qrUrl"></div>
-          <div class="full"><label class="lbl" for="t_ql">Texto abaixo do QR code</label><input id="t_ql" type="text" data-k="back.qrLabel"></div>
-        </div>
-
-        <h2>Tamanho dos textos</h2>
-        <div class="fields">
-          <div><label class="lbl" for="s_h">Faixas</label><input id="s_h" type="range" min="0.6" max="1.6" step="0.05" data-k="scale.header"></div>
-          <div><label class="lbl" for="s_v">Versículo</label><input id="s_v" type="range" min="0.6" max="1.6" step="0.05" data-k="scale.verse"></div>
-          <div><label class="lbl" for="s_f">Campos do verso</label><input id="s_f" type="range" min="0.6" max="1.6" step="0.05" data-k="scale.fields"></div>
-          <div><label class="lbl" for="s_s">Assinaturas</label><input id="s_s" type="range" min="0.6" max="1.6" step="0.05" data-k="scale.sign"></div>
-          <div><label class="lbl" for="s_p">Foto (largura)</label><input id="s_p" type="range" min="0.6" max="1.2" step="0.02" data-k="scale.photo"></div>
-        </div>
+      <div id="modForm" class="secs">
+        <div class="sec-tools"><span class="hint">Toque numa seção para abrir.</span><div class="row"><button class="btn small" id="secOpen" type="button">Abrir tudo</button><button class="btn small" id="secClose" type="button">Fechar tudo</button></div></div>
+        <details class="sec" id="sec-tam" open>
+          <summary><span class="sec-t">Tamanho e folha</span><span class="sec-s" id="sum-tam"></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="sec-b">
+            <div class="row">
+              <button class="chip" data-preset="86x54">RG / cartão 86×54</button>
+              <button class="chip" data-preset="95x60">Maior 95×60</button>
+              <button class="chip" data-preset="100x70">Crachá 100×70</button>
+            </div>
+            <div class="fields">
+              <div><label class="lbl" for="c_w">Largura do cartão (mm)</label><input id="c_w" type="number" min="40" max="140" step="0.5" data-k="card.w"></div>
+              <div><label class="lbl" for="c_h">Altura do cartão (mm)</label><input id="c_h" type="number" min="30" max="100" step="0.5" data-k="card.h"></div>
+              <div><label class="lbl" for="c_gap">Espaço entre cartões (mm)</label><input id="c_gap" type="number" min="0" max="15" step="0.5" data-k="card.gap"></div>
+              <div><label class="lbl" for="c_m">Margem da folha (mm)</label><input id="c_m" type="number" min="3" max="20" step="0.5" data-k="card.margin"></div>
+              <label class="switch full"><input type="checkbox" id="c_cut" data-k="card.cut"><span></span> Imprimir contorno de corte e linha de dobra</label>
+            </div>
+            <p class="hint" id="modFit"></p>
+          </div>
+        </details>
+        <details class="sec" id="sec-cor">
+          <summary><span class="sec-t">Cores</span><span class="sec-s" id="sum-cor"></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="sec-b">
+            <div class="colors">
+              <label class="color"><input type="color" id="k_border" data-k="colors.border"> Borda</label>
+              <label class="color"><input type="color" id="k_panel" data-k="colors.panel"> Fundo</label>
+              <label class="color"><input type="color" id="k_label" data-k="colors.label"> Rótulos e versículo</label>
+              <label class="color"><input type="color" id="k_text" data-k="colors.text"> Texto</label>
+            </div>
+          </div>
+        </details>
+        <details class="sec" id="sec-img">
+          <summary><span class="sec-t">Logo e digital</span><span class="sec-s" id="sum-img"></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="sec-b">
+            <div class="imgrow">
+              <span class="imgname">Logo</span>
+              <label class="btn small file-btn">Enviar logo<input id="logoIn" type="file" accept="image/*"></label>
+              <button class="btn small" id="logoRm" type="button">Remover</button>
+              <span class="hint" id="logoTxt">Sem logo.</span>
+            </div>
+            <div class="imgrow">
+              <span class="imgname">Digital</span>
+              <label class="btn small file-btn">Enviar imagem<input id="fingerIn" type="file" accept="image/*"></label>
+              <button class="btn small" id="fingerRm" type="button">Usar a padrão</button>
+              <span class="hint" id="fingerTxt">Digital com cruz padrão.</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="t_fp" data-k="front.finger"><span></span> Mostrar a digital na frente</label>
+            <p class="hint">Prefira PNG com fundo transparente. Sem logo, a prévia mostra “Seu logo aqui”, e na impressão o espaço fica em branco.</p>
+          </div>
+        </details>
+        <details class="sec" id="sec-wm">
+          <summary><span class="sec-t">Marca d'água</span><span class="sec-s" id="sum-wm"></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="sec-b">
+            <div class="row">
+              <label class="switch"><input type="checkbox" id="w_b" data-k="wm.back"><span></span> No verso</label>
+              <label class="switch"><input type="checkbox" id="w_f" data-k="wm.front"><span></span> Na frente</label>
+            </div>
+            <div class="seg" role="group" aria-label="Tipo de marca d'água" id="wmMode">
+              <button type="button" data-v="imagem" aria-pressed="true">Imagem</button>
+              <button type="button" data-v="texto" aria-pressed="false">Texto</button>
+            </div>
+            <div class="imgrow" id="wmImgRow">
+              <span class="imgname">Imagem</span>
+              <label class="btn small file-btn">Usar outra imagem<input id="wmIn" type="file" accept="image/*"></label>
+              <button class="btn small" id="wmRm" type="button">Usar o logo</button>
+              <span class="hint" id="wmTxt">Usa o logo enviado.</span>
+            </div>
+            <div id="wmTxtRow"><label class="lbl" for="w_t">Frase repetida no fundo</label><input id="w_t" type="text" data-k="wm.text" placeholder="REINO DE DEUS"></div>
+            <div class="fields">
+              <div><label class="lbl" for="w_o">Intensidade <span class="val" data-val="w_o"></span></label><input id="w_o" type="range" min="0.04" max="0.25" step="0.01" data-k="wm.opacity"></div>
+              <label class="switch"><input type="checkbox" id="w_m" data-k="wm.mono"><span></span> Na cor dos rótulos</label>
+            </div>
+            <p class="hint" id="wmHint"></p>
+          </div>
+        </details>
+        <details class="sec" id="sec-fr">
+          <summary><span class="sec-t">Textos da frente</span><span class="sec-s" id="sum-fr"></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="sec-b">
+            <div class="fields">
+              <div class="full"><label class="lbl" for="t_fh">Faixa do topo</label><input id="t_fh" type="text" data-k="front.header"></div>
+              <div class="full"><label class="lbl" for="t_fv">Versículo</label><textarea id="t_fv" data-k="front.verse"></textarea></div>
+              <div><label class="lbl" for="t_fr">Referência</label><input id="t_fr" type="text" data-k="front.ref"></div>
+              <div><label class="lbl" for="t_fl">Rótulo da assinatura</label><input id="t_fl" type="text" data-k="front.signLabel"></div>
+              <div><label class="lbl" for="t_sf">Assinatura (menina)</label><input id="t_sf" type="text" data-k="front.signF"></div>
+              <div><label class="lbl" for="t_sm">Assinatura (menino)</label><input id="t_sm" type="text" data-k="front.signM"></div>
+              <div class="full"><label class="lbl" for="t_ff">Faixa de baixo</label><input id="t_ff" type="text" data-k="front.footer"></div>
+            </div>
+          </div>
+        </details>
+        <details class="sec" id="sec-vs">
+          <summary><span class="sec-t">Textos do verso</span><span class="sec-s" id="sum-vs"></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="sec-b">
+            <p class="hint">Use <b>{nome}</b> para o nome da criança e <b>{filho}</b> para Filho/Filha.</p>
+            <div><label class="lbl" for="t_bh">Faixa do topo</label><input id="t_bh" type="text" data-k="back.header"></div>
+            <div id="bfields" style="display:flex;flex-direction:column;gap:8px"></div>
+            <button class="btn small" id="addField" type="button" style="align-self:flex-start">+ Adicionar campo</button>
+            <div class="fields">
+              <div><label class="lbl" for="t_bs">Assinatura</label><input id="t_bs" type="text" data-k="back.sign"></div>
+              <div><label class="lbl" for="t_bl">Rótulo da assinatura</label><input id="t_bl" type="text" data-k="back.signLabel"></div>
+              <div class="full"><label class="lbl" for="t_bf">Faixa de baixo (opcional)</label><input id="t_bf" type="text" data-k="back.footer"></div>
+            </div>
+          </div>
+        </details>
+        <details class="sec" id="sec-ex">
+          <summary><span class="sec-t">Faixa de passaporte e QR code</span><span class="sec-s" id="sum-ex"></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="sec-b">
+            <label class="switch"><input type="checkbox" id="t_mz" data-k="back.mrzOn"><span></span> Faixa estilo passaporte no rodapé do verso</label>
+            <div class="fields" id="mrzRows">
+              <div class="full"><label class="lbl" for="t_m1">Linha 1</label><input id="t_m1" type="text" data-k="back.mrz1" class="mono"></div>
+              <div class="full"><label class="lbl" for="t_m2">Linha 2</label><input id="t_m2" type="text" data-k="back.mrz2" class="mono"></div>
+              <p class="hint full" style="margin-top:-4px">Acentos e espaços viram letras simples e “&lt;”, como no passaporte. {nome} e {filho} funcionam aqui.</p>
+            </div>
+            <label class="switch"><input type="checkbox" id="t_qr" data-k="back.qrOn"><span></span> QR code no verso</label>
+            <div class="fields" id="qrRows">
+              <div class="full"><label class="lbl" for="t_qu">Link do QR code</label><input id="t_qu" type="text" inputmode="url" placeholder="https://instagram.com/suaigreja" data-k="back.qrUrl"></div>
+              <div class="full"><label class="lbl" for="t_ql">Texto abaixo do QR code</label><input id="t_ql" type="text" data-k="back.qrLabel"></div>
+            </div>
+          </div>
+        </details>
+        <details class="sec" id="sec-sz">
+          <summary><span class="sec-t">Tamanho dos textos e da foto</span><span class="sec-s" id="sum-sz"></span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="sec-b">
+            <div class="fields">
+              <div><label class="lbl" for="s_h">Faixas <span class="val" data-val="s_h"></span></label><input id="s_h" type="range" min="0.6" max="1.6" step="0.05" data-k="scale.header"></div>
+              <div><label class="lbl" for="s_v">Versículo <span class="val" data-val="s_v"></span></label><input id="s_v" type="range" min="0.6" max="1.6" step="0.05" data-k="scale.verse"></div>
+              <div><label class="lbl" for="s_f">Campos do verso <span class="val" data-val="s_f"></span></label><input id="s_f" type="range" min="0.6" max="1.6" step="0.05" data-k="scale.fields"></div>
+              <div><label class="lbl" for="s_s">Assinaturas <span class="val" data-val="s_s"></span></label><input id="s_s" type="range" min="0.6" max="1.6" step="0.05" data-k="scale.sign"></div>
+              <div><label class="lbl" for="s_p">Foto (largura) <span class="val" data-val="s_p"></span></label><input id="s_p" type="range" min="0.6" max="1.2" step="0.02" data-k="scale.photo"></div>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
     <div class="panel sticky-prev">
@@ -421,7 +483,7 @@ const DEF = {
     qrOn:false, qrUrl:"", qrLabel:"APONTE A CÂMERA",
     mrzOn:true, mrz1:"IDREINO<<{nome}", mrz2:"{filho}<DE<DEUS<<JOAO<3<16<<1PEDRO<2<9" },
   scale:{header:1,verse:1,fields:1,sign:1,photo:1},
-  wm:{back:true,front:false,opacity:0.1,mono:true},
+  wm:{back:true,front:false,opacity:0.1,mono:true,mode:"imagem",text:"REINO DE DEUS"},
   wmImg:null,
   logo:null,
   fingerImg:null
@@ -553,6 +615,22 @@ function wmSource(c){
   wmCache.set(im,{key,cv}); return cv;
 }
 function drawWatermark(ctx, c, x, y, w, h){
+  if (c.wm.mode==="texto"){
+    const t=String(c.wm.text||"").trim().toUpperCase(); if(!t) return;
+    const u=c.card.h/54, fs=2.8*u;
+    ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
+    ctx.globalAlpha=Math.max(0.02,Math.min(0.4,(+c.wm.opacity||0.1)*1.4));
+    ctx.fillStyle=c.wm.mono?c.colors.label:c.colors.text; setFont(ctx,FONT_UPB,fs);
+    const unit=t+"   ·   ", uw=mw(ctx,unit); const reps=Math.ceil((w+h)*1.6/uw)+1, line=unit.repeat(reps);
+    const cx=x+w/2, cy=y+h/2, ang=-22*Math.PI/180, step=fs*2.3, span=Math.hypot(w,h);
+    // linhas paralelas giradas, desenhadas em coordenadas de pixel
+    for (let k=-span; k<=span; k+=step){
+      const ox=cx + (-Math.sin(ang))*k, oy=cy + Math.cos(ang)*k;
+      ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.translate(ox*ctx._s, oy*ctx._s); ctx.rotate(ang);
+      ctx.textAlign="center"; ctx.textBaseline="middle"; const off=((k/step)%2)*uw*0.5*ctx._s; ctx.fillText(line, off, 0); ctx.restore();
+    }
+    ctx.restore(); return;
+  }
   const src=wmSource(c); if(!src) return;
   const k=Math.min(w/src.width, h/src.height), dw=src.width*k, dh=src.height*k;
   ctx.save(); ctx.globalAlpha=Math.max(0.02,Math.min(0.4,+c.wm.opacity||0.1)); ctx.drawImage(src, x+(w-dw)/2, y+(h-dh)/2, dw, dh); ctx.restore();
@@ -566,7 +644,7 @@ function drawFront(ctx, c, d){
   const ih=iy1-iy0; let pw=ih*0.75*S.photo; pw=Math.min(pw,(ix1-ix0)*0.45); const ph=Math.min(ih, pw/0.75);
   drawPhoto(ctx,c,d.foto, ix0, iy0+(ih-ph)/2, pw, ph, u);
   const rx=ix0+pw+2.4*u, rw=ix1-rx;
-  if (c.wm.front) drawWatermark(ctx, c, rx, iy0+1*u, rw, ih-2*u);
+  if (c.wm.front) drawWatermark(ctx, c, rx-1*u, b, W-b-(rx-1*u), H-2*b);
   const ls=Math.min(9*u, rw*0.24); drawLogo(ctx,c, ix1-ls, iy0, ls);
   ctx.fillStyle=col.label;
   const vw=rw-ls-1.2*u, vh=ih*0.44;
@@ -613,7 +691,7 @@ function drawBack(ctx, c, d){
     iy1=my-1.4*u;
   }
   const iw=ix1-ix0, ih=iy1-iy0;
-  if (c.wm.back) drawWatermark(ctx, c, ix0+iw*0.15, iy0, iw*0.7, ih);
+  if (c.wm.back){ if (c.wm.mode==="texto") drawWatermark(ctx, c, b, b, W-2*b, H-2*b); else drawWatermark(ctx, c, ix0+iw*0.15, iy0, iw*0.7, ih); }
   const cols=[{x:ix0,w:iw*0.46},{x:ix0+iw*0.5,w:iw*0.5}];
   const f1=c.back.fields.filter(f=>+f.c!==2), f2=c.back.fields.filter(f=>+f.c===2);
   const labelH=1.5*u*S.fields;
@@ -1092,9 +1170,36 @@ function uploader(inSel, rmSel, key, txtSel, okTxt, noTxt){
 uploader("#logoIn","#logoRm","logo","#logoTxt","Logo enviado.","Sem logo.");
 uploader("#fingerIn","#fingerRm","fingerImg","#fingerTxt","Imagem enviada.","Digital com cruz padrão.");
 uploader("#wmIn","#wmRm","wmImg","#wmTxt","Usando imagem própria.","Usa o logo enviado.");
+document.querySelectorAll("#wmMode button").forEach(b=>b.addEventListener("click",()=>{ if(!canEditModel) return; draft.wm.mode=b.dataset.v; touched(); }));
+function fmtVal(id, v){ v=+v; if (id==="w_o") return Math.round(v*100)+"%"; return (Math.round(v*100)/100).toLocaleString("pt-BR",{minimumFractionDigits:1})+"×"; }
+function updVals(){ document.querySelectorAll("[data-val]").forEach(sp=>{ const el=document.getElementById(sp.dataset.val); if (el) sp.textContent=fmtVal(el.id, el.value); }); }
+function updSummaries(){
+  const d=draft, L=layoutA4(d), set=(k,h)=>{ const el=$("#sum-"+k); if(el) el.innerHTML=h; };
+  set("tam", `${d.card.w} × ${d.card.h} mm · ${L?L.per+" por folha A4":"não cabe na A4"}`);
+  set("cor", ["border","panel","label","text"].map(k=>`<i class="sw" style="background:${esc(d.colors[k])}"></i>`).join("")+" Borda, fundo, rótulos e texto");
+  set("img", `${d.logo?"Logo enviado":"Sem logo"} · ${d.fingerImg?"digital enviada":"digital padrão"}${d.front.finger?"":" (escondida)"}`);
+  const lados=[d.wm.back?"verso":"",d.wm.front?"frente":""].filter(Boolean).join(" e ");
+  set("wm", lados ? `${d.wm.mode==="texto"?"Texto “"+esc(d.wm.text||"")+"”":"Imagem"} no ${lados} · ${Math.round(d.wm.opacity*100)}%` : "Desligada");
+  set("fr", `${esc(d.front.signF)} / ${esc(d.front.signM)}`);
+  set("vs", `${d.back.fields.length} campos · assinatura “${esc(d.back.sign)}”`);
+  set("ex", `Faixa ${d.back.mrzOn?"ligada":"desligada"} · QR code ${d.back.qrOn?(d.back.qrUrl?"ligado":"sem link"):"desligado"}`);
+  const sc=d.scale, def=DEF.scale, ajust=Object.keys(def).some(k=>Math.abs(sc[k]-def[k])>0.001);
+  set("sz", ajust ? "Ajustado" : "Padrão");
+}
+const secs=[...document.querySelectorAll("details.sec")];
+try{ const st=JSON.parse(localStorage.getItem("rg_secs")||"null"); if (st) secs.forEach(d=>{ if (d.id in st) d.open=!!st[d.id]; }); }catch(e){}
+function saveSecs(){ try{ localStorage.setItem("rg_secs", JSON.stringify(Object.fromEntries(secs.map(d=>[d.id,d.open])))); }catch(e){} }
+secs.forEach(d=>d.addEventListener("toggle", saveSecs));
+$("#secOpen").addEventListener("click",()=>{ secs.forEach(d=>d.open=true); saveSecs(); });
+$("#secClose").addEventListener("click",()=>{ secs.forEach(d=>d.open=false); saveSecs(); });
 function touched(){ dirty=true; syncModButtons(); schedMod(); }
 function syncModButtons(){
-  const wh=$("#wmHint"); if (wh) wh.textContent = (!draft.wm.front && !draft.wm.back) ? "Marca d'água desligada." : (!draft.logo && !draft.wmImg) ? "Envie o logo (em Imagens) ou outra imagem para a marca d'água aparecer." : "Faça a folha de teste: se o texto ficar difícil de ler, diminua a intensidade.";
+  const wh=$("#wmHint"), txtMode=draft.wm.mode==="texto";
+  if (wh) wh.textContent = (!draft.wm.front && !draft.wm.back) ? "Marca d'água desligada." : (!txtMode && !draft.logo && !draft.wmImg) ? "Envie o logo (em Logo e digital) ou outra imagem para a marca d'água aparecer." : (txtMode && !String(draft.wm.text||"").trim()) ? "Digite a frase para a marca d'água aparecer." : "Faça a folha de teste: se o texto ficar difícil de ler, diminua a intensidade.";
+  document.querySelectorAll("#wmMode button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.v===(draft.wm.mode||"imagem")));
+  $("#wmImgRow").hidden = txtMode; $("#wmTxtRow").hidden = !txtMode;
+  $("#mrzRows").hidden = !draft.back.mrzOn; $("#qrRows").hidden = !draft.back.qrOn;
+  updVals(); updSummaries();
   $("#salvar").disabled = !dirty || !canEditModel || !store; $("#descartar").disabled = !dirty;
   const show = dirty && !$("#view-mod").hidden; $("#saveBar").hidden = !show; document.body.classList.toggle("has-savebar", show);
   const L=layoutA4(draft);
