@@ -6,7 +6,7 @@
 <title>RG do Reino</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Caveat:wght@600;700&family=Great+Vibes&family=Nunito+Sans:wght@400;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Caveat:wght@600;700&family=Great+Vibes&family=Space+Mono:wght@700&family=Nunito+Sans:wght@400;600;700;800&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -319,6 +319,21 @@ body.has-savebar .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
         </div>
         <p class="hint">Prefira PNG com fundo transparente. Sem logo, a prévia mostra “Seu logo aqui”, e na impressão o espaço fica em branco.</p>
 
+        <h2>Marca d'água</h2>
+        <div class="fields">
+          <label class="checkline"><input type="checkbox" id="w_b" data-k="wm.back"> No verso</label>
+          <label class="checkline"><input type="checkbox" id="w_f" data-k="wm.front"> Na frente</label>
+          <div><label class="lbl" for="w_o">Intensidade</label><input id="w_o" type="range" min="0.04" max="0.25" step="0.01" data-k="wm.opacity"></div>
+          <label class="checkline"><input type="checkbox" id="w_m" data-k="wm.mono"> Na cor dos rótulos (fica mais com cara de documento)</label>
+        </div>
+        <div class="row">
+          <span class="lbl" style="flex:0 0 120px;margin:0">Imagem</span>
+          <label class="btn small file-btn">Usar outra imagem<input id="wmIn" type="file" accept="image/*"></label>
+          <button class="btn small" id="wmRm" type="button">Usar o logo</button>
+          <span class="hint" id="wmTxt">Usa o logo enviado.</span>
+        </div>
+        <p class="hint" id="wmHint"></p>
+
         <h2>Frente</h2>
         <div class="fields">
           <div class="full"><label class="lbl" for="t_fh">Faixa do topo</label><input id="t_fh" type="text" data-k="front.header"></div>
@@ -342,6 +357,13 @@ body.has-savebar .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
           <div><label class="lbl" for="t_bs">Assinatura</label><input id="t_bs" type="text" data-k="back.sign"></div>
           <div><label class="lbl" for="t_bl">Rótulo da assinatura</label><input id="t_bl" type="text" data-k="back.signLabel"></div>
           <div class="full"><label class="lbl" for="t_bf">Faixa de baixo (opcional)</label><input id="t_bf" type="text" data-k="back.footer"></div>
+          <label class="checkline full"><input type="checkbox" id="t_mz" data-k="back.mrzOn"> Faixa estilo passaporte no rodapé</label>
+          <div class="full"><label class="lbl" for="t_m1">Linha 1 da faixa</label><input id="t_m1" type="text" data-k="back.mrz1" class="mono"></div>
+          <div class="full"><label class="lbl" for="t_m2">Linha 2 da faixa</label><input id="t_m2" type="text" data-k="back.mrz2" class="mono"></div>
+          <p class="hint full" style="margin-top:-4px">Acentos e espaços viram letras simples e “&lt;”, como no passaporte. {nome} e {filho} funcionam aqui também.</p>
+          <label class="checkline full"><input type="checkbox" id="t_qr" data-k="back.qrOn"> QR code no verso</label>
+          <div class="full"><label class="lbl" for="t_qu">Link do QR code</label><input id="t_qu" type="text" inputmode="url" placeholder="https://instagram.com/suaigreja" data-k="back.qrUrl"></div>
+          <div class="full"><label class="lbl" for="t_ql">Texto abaixo do QR code</label><input id="t_ql" type="text" data-k="back.qrLabel"></div>
         </div>
 
         <h2>Tamanho dos textos</h2>
@@ -395,8 +417,12 @@ const DEF = {
       {l:"DATA DE EXPEDIÇÃO",v:"O DIA QUE NASCEU DE NOVO",c:2},
       {l:"DATA DE NASCIMENTO",v:"O DIA EM QUE CONFESSOU QUE JESUS CRISTO É O SALVADOR DA SUA VIDA, O FILHO DE DEUS QUE MORREU E AO TERCEIRO DIA RESSUSCITOU.",c:2}
     ],
-    sign:"Jesus Cristo", signLabel:"ASSINATURA DO DIRETOR", footer:"" },
+    sign:"Jesus Cristo", signLabel:"ASSINATURA DO DIRETOR", footer:"",
+    qrOn:false, qrUrl:"", qrLabel:"APONTE A CÂMERA",
+    mrzOn:true, mrz1:"IDREINO<<{nome}", mrz2:"{filho}<DE<DEUS<<JOAO<3<16<<1PEDRO<2<9" },
   scale:{header:1,verse:1,fields:1,sign:1,photo:1},
+  wm:{back:true,front:false,opacity:0.1,mono:true},
+  wmImg:null,
   logo:null,
   fingerImg:null
 };
@@ -517,6 +543,20 @@ function drawFinger(ctx, x, y, w, h, u, c){
 }
 function fill(s, d){ return String(s||"").replace(/\{nome\}/gi, (d.nome||"").toUpperCase()).replace(/\{filho\}/gi, d.genero==="M"?"Filho":"Filha"); }
 
+const wmCache=new WeakMap();
+function wmSource(c){
+  const im=c._wmImg||c._logoImg; if(!im) return null;
+  if (!c.wm.mono) return im;
+  const key=c.colors.label; let m=wmCache.get(im); if (m && m.key===key) return m.cv;
+  const cv=document.createElement("canvas"); cv.width=im.width; cv.height=im.height; const x=cv.getContext("2d");
+  x.drawImage(im,0,0); x.globalCompositeOperation="source-in"; x.fillStyle=key; x.fillRect(0,0,cv.width,cv.height);
+  wmCache.set(im,{key,cv}); return cv;
+}
+function drawWatermark(ctx, c, x, y, w, h){
+  const src=wmSource(c); if(!src) return;
+  const k=Math.min(w/src.width, h/src.height), dw=src.width*k, dh=src.height*k;
+  ctx.save(); ctx.globalAlpha=Math.max(0.02,Math.min(0.4,+c.wm.opacity||0.1)); ctx.drawImage(src, x+(w-dw)/2, y+(h-dh)/2, dw, dh); ctx.restore();
+}
 function drawFront(ctx, c, d){
   const W=c.card.w, H=c.card.h, u=H/54, b=3*u, pad=2*u, S=c.scale, col=c.colors;
   drawBase(ctx,c,W,H,u);
@@ -526,6 +566,7 @@ function drawFront(ctx, c, d){
   const ih=iy1-iy0; let pw=ih*0.75*S.photo; pw=Math.min(pw,(ix1-ix0)*0.45); const ph=Math.min(ih, pw/0.75);
   drawPhoto(ctx,c,d.foto, ix0, iy0+(ih-ph)/2, pw, ph, u);
   const rx=ix0+pw+2.4*u, rw=ix1-rx;
+  if (c.wm.front) drawWatermark(ctx, c, rx, iy0+1*u, rw, ih-2*u);
   const ls=Math.min(9*u, rw*0.24); drawLogo(ctx,c, ix1-ls, iy0, ls);
   ctx.fillStyle=col.label;
   const vw=rw-ls-1.2*u, vh=ih*0.44;
@@ -543,13 +584,36 @@ function drawFront(ctx, c, d){
   ctx.fillStyle=col.label; const lr=fit(ctx,(c.front.signLabel||"").toUpperCase(),FONT_UPB,sw,2.2*u,1.45*u*S.header,0.8*u); drawFit(ctx,lr,sx,lineY+0.5*u,sw,2*u,"center");
   if (c.front.footer){ const fw2=W*0.44; pill(ctx,c,c.front.footer, W-b-pad-fw2, H-b-ph0/2, fw2, ph0, S.header); }
 }
+const FONT_MRZ='700 # "Space Mono","Courier New",monospace';
+function mrzLine(t, d, n=36){
+  let s=fill(t,d).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Z0-9<]/g,"<");
+  return (s+"<".repeat(n)).slice(0,n);
+}
+const qrCache=new Map();
+function qrCanvas(url){
+  if (!url || !window.QRCode) return null;
+  if (qrCache.has(url)) return qrCache.get(url);
+  try{ const div=document.createElement("div"); new QRCode(div,{text:url,width:264,height:264,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
+    const cv=div.querySelector("canvas"); qrCache.set(url,cv||null); return cv||null; }catch(e){ return null; }
+}
 function drawBack(ctx, c, d){
   const W=c.card.w, H=c.card.h, u=H/54, b=3*u, pad=2.2*u, S=c.scale, col=c.colors;
   drawBase(ctx,c,W,H,u);
   const ph0=3.6*u;
   pill(ctx,c,c.back.header, W*0.17, b-ph0/2, W*0.66, ph0, S.header);
-  const ix0=b+pad, iy0=b+3*u, ix1=W-b-pad, iy1=H-b-(c.back.footer?3.4*u:1.8*u);
+  const ix0=b+pad, iy0=b+3*u, ix1=W-b-pad;
+  let iy1=H-b-(c.back.footer?3.4*u:1.8*u);
+  if (c.back.mrzOn){
+    const mh=7.2*u, my=iy1-mh+1.2*u;
+    ctx.fillStyle="rgba(255,255,255,.72)"; ctx.fillRect(b, my, W-2*b, mh);
+    ctx.fillStyle=col.text; const lines=[mrzLine(c.back.mrz1,d), mrzLine(c.back.mrz2,d)];
+    let fs=3*u; setFont(ctx,FONT_MRZ,fs); const mwid=mw(ctx,lines[0]); const avail=W-2*b-3*u; fs=fs*Math.min(1,avail/mwid);
+    setFont(ctx,FONT_MRZ,fs); ctx.textAlign="center";
+    lines.forEach((l,i)=>txt(ctx,l,W/2, my+mh*0.42+i*mh*0.40));
+    iy1=my-1.4*u;
+  }
   const iw=ix1-ix0, ih=iy1-iy0;
+  if (c.wm.back) drawWatermark(ctx, c, ix0+iw*0.15, iy0, iw*0.7, ih);
   const cols=[{x:ix0,w:iw*0.46},{x:ix0+iw*0.5,w:iw*0.5}];
   const f1=c.back.fields.filter(f=>+f.c!==2), f2=c.back.fields.filter(f=>+f.c===2);
   const labelH=1.5*u*S.fields;
@@ -564,11 +628,20 @@ function drawBack(ctx, c, d){
       y+=sh; });
   };
   drawCol(f1, cols[0], iy0, ih);
-  const sigH = c.back.sign ? Math.min(ih*0.34, 13*u) : 0;
+  const qr = c.back.qrOn ? qrCanvas(String(c.back.qrUrl||"").trim()) : null;
+  const sigH = (c.back.sign || qr) ? Math.min(ih*(qr?0.44:0.34), (qr?17:13)*u) : 0;
   drawCol(f2, cols[1], iy0, ih - sigH);
+  let c2=cols[1];
+  if (qr){
+    const lab=(c.back.qrLabel||"").trim(), labH=lab?1.8*u:0, qs=Math.min(sigH-labH-0.4*u, c2.w*0.42), qx=c2.x, qy=iy1-qs-labH;
+    ctx.fillStyle="#ffffff"; rr(ctx,qx-0.5*u,qy-0.5*u,qs+u,qs+u,0.6*u); ctx.fill();
+    ctx.save(); ctx.imageSmoothingEnabled=false; ctx.drawImage(qr,qx,qy,qs,qs); ctx.restore();
+    if (lab){ ctx.fillStyle=col.label; const lr=fit(ctx,lab.toUpperCase(),FONT_UPB,qs+2*u,labH,1.35*u,0.7*u); drawFit(ctx,lr,qx-u,qy+qs+0.5*u,qs+2*u,labH,"center"); }
+    c2={x:c2.x+qs+2*u, w:c2.w-qs-2*u};
+  }
   if (c.back.sign){
-    const c2=cols[1], lineY=iy1-2.4*u;
-    ctx.fillStyle=col.text; const sr=fit(ctx,c.back.sign,FONT_SIG2,c2.w,sigH-2.6*u,7*u*S.sign,2*u,1); drawFit(ctx,sr,c2.x,lineY-(sigH-2.2*u),c2.w,sigH-2.6*u,"center","bottom");
+    const lineY=iy1-2.4*u;
+    ctx.fillStyle=col.text; const sr=fit(ctx,c.back.sign,FONT_SIG2,c2.w,Math.min(sigH-2.6*u,7*u*S.sign),7*u*S.sign,1.5*u,1); drawFit(ctx,sr,c2.x,lineY-(sigH-2.2*u),c2.w,sigH-2.6*u,"center","bottom");
     ctx.strokeStyle=col.label; ctx.lineWidth=0.18*u; ctx.beginPath(); ctx.moveTo(c2.x,lineY); ctx.lineTo(c2.x+c2.w,lineY); ctx.stroke();
     ctx.fillStyle=col.label; const lr=fit(ctx,(c.back.signLabel||"").toUpperCase(),FONT_UPB,c2.w,2*u,1.4*u*S.header,0.8*u); drawFit(ctx,lr,c2.x,lineY+0.45*u,c2.w,2*u,"center");
   }
@@ -648,7 +721,7 @@ const $ = s => document.querySelector(s);
 const imgCache = new Map();
 function loadImg(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
 async function loadCached(src){ if (!src) return null; try{ const i=imgCache.get(src) || await loadImg(src); imgCache.set(src,i); return i; }catch(e){ return null; } }
-async function attachLogo(c){ c._logoImg = await loadCached(c.logo); c._fingerImg = await loadCached(c.fingerImg); return c; }
+async function attachLogo(c){ c._logoImg = await loadCached(c.logo); c._fingerImg = await loadCached(c.fingerImg); c._wmImg = await loadCached(c.wmImg); return c; }
 function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),2600); }
 function setStatus(ok, m){ $("#sdot").classList.toggle("ok", ok); $("#stxt").textContent=m; }
 function errMsg(e){
@@ -970,6 +1043,8 @@ function fillForm(){
   $("#logoIn").disabled = !canEditModel; $("#logoRm").disabled = !canEditModel || !draft.logo;
   $("#fingerTxt").textContent = draft.fingerImg ? "Imagem enviada." : "Digital com cruz padrão.";
   $("#fingerIn").disabled = !canEditModel; $("#fingerRm").disabled = !canEditModel || !draft.fingerImg;
+  $("#wmTxt").textContent = draft.wmImg ? "Usando imagem própria." : "Usa o logo enviado.";
+  $("#wmIn").disabled = !canEditModel; $("#wmRm").disabled = !canEditModel || !draft.wmImg;
   $("#padrao").disabled = !canEditModel; $("#addField").disabled = !canEditModel;
   document.querySelectorAll("[data-preset]").forEach(b=>b.disabled=!canEditModel);
   $("#modRO").hidden = canEditModel;
@@ -1016,8 +1091,10 @@ function uploader(inSel, rmSel, key, txtSel, okTxt, noTxt){
 }
 uploader("#logoIn","#logoRm","logo","#logoTxt","Logo enviado.","Sem logo.");
 uploader("#fingerIn","#fingerRm","fingerImg","#fingerTxt","Imagem enviada.","Digital com cruz padrão.");
+uploader("#wmIn","#wmRm","wmImg","#wmTxt","Usando imagem própria.","Usa o logo enviado.");
 function touched(){ dirty=true; syncModButtons(); schedMod(); }
 function syncModButtons(){
+  const wh=$("#wmHint"); if (wh) wh.textContent = (!draft.wm.front && !draft.wm.back) ? "Marca d'água desligada." : (!draft.logo && !draft.wmImg) ? "Envie o logo (em Imagens) ou outra imagem para a marca d'água aparecer." : "Faça a folha de teste: se o texto ficar difícil de ler, diminua a intensidade.";
   $("#salvar").disabled = !dirty || !canEditModel || !store; $("#descartar").disabled = !dirty;
   const show = dirty && !$("#view-mod").hidden; $("#saveBar").hidden = !show; document.body.classList.toggle("has-savebar", show);
   const L=layoutA4(draft);
@@ -1029,7 +1106,7 @@ function renderModPreview(){
   const d={nome:"Olivia", genero:"F", foto:null};
   previewTo($("#mvF"),"F",draft,d); previewTo($("#mvB"),"B",draft,d);
 }
-function plainCfg(c){ const o={...c}; delete o._logoImg; delete o._fingerImg; delete o._print; return clone(o); }
+function plainCfg(c){ const o={...c}; delete o._logoImg; delete o._fingerImg; delete o._wmImg; delete o._print; return clone(o); }
 $("#salvar").addEventListener("click", async ()=>{
   const b=$("#salvar"); b.disabled=true; b.textContent="Salvando…";
   try{ await store.saveConfig(plainCfg(draft)); dirty=false; cfg=await attachLogo(merge(DEF, plainCfg(draft))); toast("Modelo salvo"); broadcastModelo(); $("#modMsg").textContent="Modelo salvo neste aparelho. Para levar a outro aparelho, use Exportar fila."; }
