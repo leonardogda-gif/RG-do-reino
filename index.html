@@ -1,0 +1,1059 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RG do Reino</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Caveat:wght@600;700&family=Great+Vibes&family=Nunito+Sans:wght@400;600;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+/* Layout: app de mesa de cadastro — barra com abas, área de trabalho em duas colunas (captura | prévia do RG), uma coluna no celular */
+:root{
+  --bg:#eef2ea; --surface:#ffffff; --surface-2:#f6f8f3; --ink:#18261c; --muted:#5b6a5e; --line:#d3dccd;
+  --green:#2e7a3c; --green-ink:#ffffff; --green-soft:#dcebd6;
+  --amber:#a86b00; --amber-soft:#fbefd2; --danger:#b3261e; --danger-soft:#fbe3e1;
+  --f-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-body:"Nunito Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101612; --surface:#18211b; --surface-2:#1e2922; --ink:#e5ece4; --muted:#9aab9d; --line:#2c3a30;
+  --green:#6cbf7a; --green-ink:#0d1a10; --green-soft:#1f3324;
+  --amber:#f0b44a; --amber-soft:#3a2d12; --danger:#ff8a80; --danger-soft:#3b1d1b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101612; --surface:#18211b; --surface-2:#1e2922; --ink:#e5ece4; --muted:#9aab9d; --line:#2c3a30;
+  --green:#6cbf7a; --green-ink:#0d1a10; --green-soft:#1f3324;
+  --amber:#f0b44a; --amber-soft:#3a2d12; --danger:#ff8a80; --danger-soft:#3b1d1b; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-block:16px 10px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:38px;height:26px;border-radius:5px;background:var(--green);position:relative;flex:none}
+.brand-mark::after{content:"";position:absolute;inset:4px;border-radius:3px;background:var(--surface);opacity:.9}
+.brand-mark::before{content:"";position:absolute;left:8px;top:8px;width:8px;height:10px;border-radius:2px;background:var(--green);z-index:1}
+h1{font-family:var(--f-display);font-weight:700;font-size:26px;letter-spacing:.02em;margin:0;line-height:1}
+.brand small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.status{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--amber)}
+.dot.ok{background:var(--green)}
+nav.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;margin-block:4px 18px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+nav.tabs button{flex:1;border:0;background:transparent;color:var(--muted);font:600 15px var(--f-body);padding:10px 8px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+nav.tabs button[aria-selected="true"]{background:var(--green);color:var(--green-ink)}
+nav.tabs .sm{display:none}
+@media (max-width:480px){nav.tabs .lg{display:none}nav.tabs .sm{display:inline}}
+nav.tabs .count{font:700 12px var(--f-body);background:var(--amber-soft);color:var(--amber);border-radius:20px;padding:1px 7px}
+nav.tabs button[aria-selected="true"] .count{background:var(--green-ink);color:var(--green)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;align-items:start}
+@media (max-width:820px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h2{font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:.04em;text-transform:uppercase;margin:0}
+.panel h3{font-family:var(--f-display);font-weight:600;font-size:16px;letter-spacing:.05em;text-transform:uppercase;margin:6px 0 0;color:var(--muted)}
+.hint{color:var(--muted);font-size:13px;margin:0}
+label.lbl{display:block;font:700 12px var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+input[type=text],input[type=number],textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px 11px}
+textarea{resize:vertical;min-height:64px}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible,.chip:focus-within{outline:2px solid var(--green);outline-offset:2px}
+.big-name{font-size:20px;font-weight:700}
+.btn{font:700 15px var(--f-body);border-radius:10px;padding:11px 16px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.btn.danger{color:var(--danger);border-color:var(--danger)}
+.btn.small{padding:7px 11px;font-size:13.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.block{width:100%;padding:14px;font-size:16.5px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row > *{min-width:0}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:0;background:var(--surface-2);color:var(--ink);font:700 15px var(--f-body);padding:11px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--green);color:var(--green-ink)}
+/* captura */
+.capture{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:460px){.capture{grid-template-columns:minmax(0,1fr)}}
+.cropbox{position:relative;width:100%;max-width:260px;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:var(--surface-2);border:1px dashed var(--line);touch-action:none}
+.cropbox canvas{width:100%;height:100%;display:block;cursor:grab}
+.cropbox .guide{position:absolute;left:22%;right:22%;top:14%;bottom:30%;border:2px dashed rgba(255,255,255,.75);border-radius:50%;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.cropbox .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:13px;text-align:center;padding:12px;pointer-events:none}
+.file-btn{position:relative;overflow:hidden}
+.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+input[type=range]{width:100%;accent-color:var(--green)}
+.preview-stack{display:flex;flex-direction:column;gap:10px}
+.preview-stack canvas{width:100%;height:auto;display:block;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.12),0 6px 18px rgba(20,40,20,.10)}
+.cap{font:600 12px var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.tag-ex{font:700 11px var(--f-body);background:var(--amber-soft);color:var(--amber);padding:2px 8px;border-radius:20px;letter-spacing:.04em}
+/* fila */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.stat b{display:block;font:700 26px var(--f-display);font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:12.5px;color:var(--muted)}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:20px;padding:6px 12px;font:600 13.5px var(--f-body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.item{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);background:var(--surface)}
+.item:first-child{border-top:0}
+.item input[type=checkbox]{width:20px;height:20px;accent-color:var(--green)}
+.avatar{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font:700 16px var(--f-display);background:var(--green-soft);color:var(--green)}
+.item .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .meta{font-size:12.5px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{font:700 11.5px var(--f-body);padding:2px 8px;border-radius:20px}
+.pill.wait{background:var(--amber-soft);color:var(--amber)}
+.pill.done{background:var(--green-soft);color:var(--green)}
+.item .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.item-detail{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding-top:6px}
+@media (max-width:560px){.item{grid-template-columns:auto auto minmax(0,1fr)}.item .acts{grid-column:1/-1;justify-content:flex-start}.item-detail{grid-template-columns:minmax(0,1fr)}}
+.item-detail canvas{width:100%;height:auto;border-radius:6px}
+.edit-row{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
+.edit-row input{flex:1 1 180px}
+.emptystate{padding:28px 16px;text-align:center;color:var(--muted);background:var(--surface)}
+.emptystate b{display:block;color:var(--ink);font:700 18px var(--f-display);letter-spacing:.03em;margin-bottom:4px}
+.a4wrap{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.a4wrap canvas{width:96px;height:auto;border:1px solid var(--line);border-radius:3px;background:#fff;flex:none}
+.progress{height:8px;background:var(--surface-2);border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.progress i{display:block;height:100%;width:0;background:var(--green);transition:width .2s}
+.notice{border-radius:10px;padding:10px 12px;font-size:13.5px;background:var(--green-soft);color:var(--ink);border:1px solid var(--line)}
+.notice.warn{background:var(--amber-soft)}
+/* modelo */
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.fields .full{grid-column:1/-1}
+@media (max-width:520px){.fields{grid-template-columns:minmax(0,1fr)}}
+.colors{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.color{display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13.5px}
+.color input{width:34px;height:28px;border:0;padding:0;background:none;cursor:pointer}
+.bfield{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 90px auto;gap:6px;align-items:start}
+@media (max-width:560px){.bfield{grid-template-columns:minmax(0,1fr) 90px auto}.bfield textarea{grid-column:1/-1;order:5}}
+.bfield textarea{min-height:42px}
+.sticky-prev{position:sticky;top:76px}
+@media (max-width:820px){.sticky-prev{position:static}}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--surface);padding:11px 16px;border-radius:10px;font-weight:700;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:20;max-width:calc(100% - 32px)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.checkline{display:flex;gap:8px;align-items:center;font-size:14px}
+.checkline input{width:18px;height:18px;accent-color:var(--green)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.qr{width:196px;height:196px;padding:8px;background:#fff;border-radius:10px;border:1px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;color:#5b6a5e;font-size:12px;text-align:center}
+.qr img,.qr canvas{display:block;width:180px;height:180px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-all}
+#printArea{display:none}
+@media print{
+  body{background:#fff!important}
+  body > *:not(#printArea){display:none!important}
+  #printArea{display:block}
+  #printArea img{display:block;page-break-after:always;break-after:page;margin:0}
+}
+</style>
+<style id="pageStyle"></style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><div class="brand-mark" aria-hidden="true"></div>
+      <div><h1>RG do Reino</h1><small>Identidade do Cristão · cadastro do evento kids</small></div></div>
+    <div class="status"><span class="dot" id="sdot"></span><span id="stxt">Carregando…</span></div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-cad" aria-selected="true" data-tab="cad">Cadastrar</button>
+    <button role="tab" id="tab-fila" aria-selected="false" data-tab="fila"><span class="lg">Fila de impressão</span><span class="sm">Fila</span> <span class="count" id="tabCount">0</span></button>
+    <button role="tab" id="tab-mod" aria-selected="false" data-tab="mod">Modelo</button>
+  </nav>
+
+  <!-- CADASTRAR -->
+  <section id="view-cad" class="grid2">
+    <div class="panel">
+      <h2>Nova criança</h2>
+      <div class="capture">
+        <div class="cropbox" id="cropbox">
+          <canvas id="crop" width="600" height="800" aria-label="Foto da criança; arraste para ajustar"></canvas>
+          <div class="guide" id="guide" hidden></div>
+          <div class="empty" id="cropEmpty"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></svg>Tire a foto da criança de frente, com fundo claro</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+          <label class="btn primary file-btn">Tirar foto<input id="fCam" type="file" accept="image/*" capture="environment"></label>
+          <label class="btn file-btn">Escolher da galeria<input id="fGal" type="file" accept="image/*"></label>
+          <div id="cropCtl" hidden style="display:flex;flex-direction:column;gap:8px">
+            <label class="lbl" for="zoom">Aproximar</label>
+            <input id="zoom" type="range" min="1" max="3" step="0.01" value="1">
+            <button class="btn small" id="rot" type="button">Girar 90°</button>
+            <p class="hint">Arraste a foto para centralizar o rosto no oval.</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <label class="lbl" for="nome">Nome da criança</label>
+        <input id="nome" class="big-name" type="text" autocomplete="off" placeholder="Ex.: Olivia" maxlength="40">
+      </div>
+      <div>
+        <span class="lbl">Menina ou menino</span>
+        <div class="seg" role="group" aria-label="Gênero">
+          <button type="button" id="gF" aria-pressed="true">Menina · <span id="gFtxt">Filha de Deus</span></button>
+          <button type="button" id="gM" aria-pressed="false">Menino · <span id="gMtxt">Filho de Deus</span></button>
+        </div>
+      </div>
+      <button class="btn primary block" id="enviar" disabled>Enviar para a fila de impressão</button>
+      <p class="hint" id="cadHint">Falta a foto e o nome.</p>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between"><h2>Prévia do RG</h2><span class="cap" id="sizeCap">86 × 54 mm</span></div>
+      <div class="preview-stack">
+        <span class="cap">Frente</span><canvas id="pvF"></canvas>
+        <span class="cap">Verso</span><canvas id="pvB"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- FILA -->
+  <section id="view-fila" hidden>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div class="panel" id="pairPanel">
+        <div class="row" style="justify-content:space-between"><h2>Conectar celular</h2><span class="status"><span class="dot" id="pdot"></span><span id="ptxt">Recepção desligada</span></span></div>
+        <div class="a4wrap">
+          <div class="qr" id="qr">O QR code aparece aqui</div>
+          <div style="flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:10px">
+            <p class="hint">Use no computador da impressora. Ligue a recepção e aponte a câmera do celular para o código. O celular abre o app já conectado, e cada RG cadastrado nele chega aqui na fila. Pode conectar mais de um celular.</p>
+            <div class="row"><button class="btn primary" id="pairOn">Ligar recepção</button><button class="btn" id="pairOff" hidden>Desligar</button></div>
+            <p class="mono" id="pairLink"></p>
+          </div>
+        </div>
+      </div>
+      <div class="notice" id="phoneNote" hidden>Este celular está mandando os RGs para o computador. A impressão é feita lá. Aqui fica uma cópia de tudo o que foi cadastrado.</div>
+      <div class="panel">
+        <div class="stats">
+          <div class="stat"><b id="stWait">0</b><span>aguardando impressão</span></div>
+          <div class="stat"><b id="stDone">0</b><span>já impressos</span></div>
+          <div class="stat"><b id="stPer">5</b><span>RGs por folha A4</span></div>
+          <div class="stat"><b id="stSheets">0</b><span>folhas para a fila atual</span></div>
+        </div>
+        <div class="a4wrap">
+          <canvas id="a4" width="210" height="297" aria-label="Distribuição na folha A4"></canvas>
+          <div style="flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:10px">
+            <p class="hint" id="a4txt">Cada RG sai com frente e verso lado a lado. Corte pelo contorno, dobre na linha tracejada e plastifique.</p>
+            <div class="row">
+              <button class="btn primary" id="gerar" disabled>Imprimir</button>
+              <button class="btn" id="baixar" disabled>Baixar PDF</button>
+              <button class="btn" id="enviarPdf" hidden disabled>Enviar PDF</button>
+              <button class="btn" id="teste">Folha de teste</button>
+            </div>
+            <div class="progress" id="prog" hidden><i id="progBar"></i></div>
+            <div id="afterPdf" hidden class="notice">
+              <div style="margin-bottom:8px" id="afterTxt">PDF salvo.</div>
+              <button class="btn small primary" id="marcar">Marcar como impressos</button>
+            </div>
+            <p class="hint">Ao imprimir, use papel A4, escala <b>100% / tamanho real</b> e margens <b>nenhuma</b>. Na Epson, desligue “Ajustar à página”. Do celular, “Enviar PDF” manda o arquivo pelo WhatsApp, e-mail ou Drive para abrir no PC.</p>
+            <div class="row" style="border-top:1px solid var(--line);padding-top:12px">
+              <button class="btn small" id="exportar">Exportar fila (arquivo)</button>
+              <label class="btn small file-btn">Importar fila<input id="importar" type="file" accept=".json,application/json"></label>
+              <span class="hint">Leva a fila com fotos e o modelo de um aparelho para outro.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
+          <div class="filters" role="group" aria-label="Filtro">
+            <button class="chip" data-f="fila" aria-pressed="true">Aguardando</button>
+            <button class="chip" data-f="impresso" aria-pressed="false">Impressos</button>
+            <button class="chip" data-f="todos" aria-pressed="false">Todos</button>
+          </div>
+          <label class="checkline"><input type="checkbox" id="selAll"> Selecionar todos</label>
+        </div>
+        <div class="list" id="list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODELO -->
+  <section id="view-mod" class="grid2" hidden>
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <div class="notice warn" id="modRO" hidden>Só quem tem acesso de edição pode alterar o modelo. Você pode ver como está configurado.</div>
+      <div class="panel" id="modForm">
+        <h2>Tamanho e folha</h2>
+        <div class="row">
+          <button class="chip" data-preset="86x54">RG / cartão 86×54</button>
+          <button class="chip" data-preset="95x60">Maior 95×60</button>
+          <button class="chip" data-preset="100x70">Crachá 100×70</button>
+        </div>
+        <div class="fields">
+          <div><label class="lbl" for="c_w">Largura do cartão (mm)</label><input id="c_w" type="number" min="40" max="140" step="0.5" data-k="card.w"></div>
+          <div><label class="lbl" for="c_h">Altura do cartão (mm)</label><input id="c_h" type="number" min="30" max="100" step="0.5" data-k="card.h"></div>
+          <div><label class="lbl" for="c_gap">Espaço entre cartões (mm)</label><input id="c_gap" type="number" min="0" max="15" step="0.5" data-k="card.gap"></div>
+          <div><label class="lbl" for="c_m">Margem da folha (mm)</label><input id="c_m" type="number" min="3" max="20" step="0.5" data-k="card.margin"></div>
+          <label class="checkline full"><input type="checkbox" id="c_cut" data-k="card.cut"> Imprimir contorno de corte e linha de dobra</label>
+        </div>
+        <p class="hint" id="modFit"></p>
+
+        <h2>Cores</h2>
+        <div class="colors">
+          <label class="color"><input type="color" id="k_border" data-k="colors.border"> Borda</label>
+          <label class="color"><input type="color" id="k_panel" data-k="colors.panel"> Fundo</label>
+          <label class="color"><input type="color" id="k_label" data-k="colors.label"> Rótulos e versículo</label>
+          <label class="color"><input type="color" id="k_text" data-k="colors.text"> Texto</label>
+        </div>
+
+        <h2>Logo</h2>
+        <div class="row">
+          <label class="btn small file-btn">Enviar logo (PNG)<input id="logoIn" type="file" accept="image/*"></label>
+          <button class="btn small" id="logoRm" type="button">Usar logo genérico</button>
+          <span class="hint" id="logoTxt">Usando logo genérico.</span>
+        </div>
+
+        <h2>Frente</h2>
+        <div class="fields">
+          <div class="full"><label class="lbl" for="t_fh">Faixa do topo</label><input id="t_fh" type="text" data-k="front.header"></div>
+          <div class="full"><label class="lbl" for="t_fv">Versículo</label><textarea id="t_fv" data-k="front.verse"></textarea></div>
+          <div><label class="lbl" for="t_fr">Referência</label><input id="t_fr" type="text" data-k="front.ref"></div>
+          <div><label class="lbl" for="t_fl">Rótulo da assinatura</label><input id="t_fl" type="text" data-k="front.signLabel"></div>
+          <div><label class="lbl" for="t_sf">Assinatura (menina)</label><input id="t_sf" type="text" data-k="front.signF"></div>
+          <div><label class="lbl" for="t_sm">Assinatura (menino)</label><input id="t_sm" type="text" data-k="front.signM"></div>
+          <div class="full"><label class="lbl" for="t_ff">Faixa de baixo</label><input id="t_ff" type="text" data-k="front.footer"></div>
+          <label class="checkline full"><input type="checkbox" id="t_fp" data-k="front.finger"> Mostrar digital com a cruz</label>
+        </div>
+
+        <h2>Verso</h2>
+        <p class="hint">Use <b>{nome}</b> para o nome da criança e <b>{filho}</b> para Filho/Filha.</p>
+        <div class="fields">
+          <div class="full"><label class="lbl" for="t_bh">Faixa do topo</label><input id="t_bh" type="text" data-k="back.header"></div>
+        </div>
+        <div id="bfields" style="display:flex;flex-direction:column;gap:8px"></div>
+        <button class="btn small" id="addField" type="button" style="align-self:flex-start">+ Adicionar campo</button>
+        <div class="fields">
+          <div><label class="lbl" for="t_bs">Assinatura</label><input id="t_bs" type="text" data-k="back.sign"></div>
+          <div><label class="lbl" for="t_bl">Rótulo da assinatura</label><input id="t_bl" type="text" data-k="back.signLabel"></div>
+          <div class="full"><label class="lbl" for="t_bf">Faixa de baixo (opcional)</label><input id="t_bf" type="text" data-k="back.footer"></div>
+        </div>
+
+        <h2>Tamanho dos textos</h2>
+        <div class="fields">
+          <div><label class="lbl" for="s_h">Faixas</label><input id="s_h" type="range" min="0.6" max="1.6" step="0.05" data-k="scale.header"></div>
+          <div><label class="lbl" for="s_v">Versículo</label><input id="s_v" type="range" min="0.6" max="1.6" step="0.05" data-k="scale.verse"></div>
+          <div><label class="lbl" for="s_f">Campos do verso</label><input id="s_f" type="range" min="0.6" max="1.6" step="0.05" data-k="scale.fields"></div>
+          <div><label class="lbl" for="s_s">Assinaturas</label><input id="s_s" type="range" min="0.6" max="1.6" step="0.05" data-k="scale.sign"></div>
+          <div><label class="lbl" for="s_p">Foto (largura)</label><input id="s_p" type="range" min="0.6" max="1.2" step="0.02" data-k="scale.photo"></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel sticky-prev">
+      <div class="row" style="justify-content:space-between"><h2>Prévia</h2><span class="tag-ex">Exemplo</span></div>
+      <div class="preview-stack">
+        <span class="cap">Frente</span><canvas id="mvF"></canvas>
+        <span class="cap">Verso</span><canvas id="mvB"></canvas>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="salvar" disabled>Salvar modelo</button>
+        <button class="btn" id="descartar" disabled>Descartar alterações</button>
+        <button class="btn" id="padrao">Restaurar padrão</button>
+      </div>
+      <p class="hint" id="modMsg">O modelo fica salvo neste aparelho e vale para os próximos RGs.</p>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<div id="printArea"></div>
+
+<script>
+/* ---------- modelo padrão ---------- */
+const DEF = {
+  card:{w:86,h:54,gap:3,margin:5,cut:true},
+  colors:{border:"#3f8b3c",panel:"#f3f6dc",label:"#7e9a2c",text:"#1e2a1f"},
+  front:{
+    header:"REPÚBLICA FEDERATIVA DO REINO DE DEUS",
+    verse:"VOCÊS, PORÉM, SÃO GERAÇÃO ELEITA, SACERDÓCIO REAL, NAÇÃO SANTA, POVO EXCLUSIVO DE DEUS, PARA ANUNCIAR AS GRANDEZAS DAQUELE QUE OS CHAMOU DAS TREVAS PARA A SUA MARAVILHOSA LUZ.",
+    ref:"1 PEDRO 2:9", signF:"Filha de Deus", signM:"Filho de Deus", signLabel:"ASSINATURA DO TITULAR",
+    footer:"IDENTIDADE DO CRISTÃO", finger:true },
+  back:{
+    header:"VÁLIDA EM TODO TERRITÓRIO UNIVERSAL",
+    fields:[
+      {l:"REGISTRO GERAL",v:"JOÃO 3:16",c:1},
+      {l:"NOME",v:"{nome}",c:1},
+      {l:"FILIAÇÃO",v:"PAI DE AMOR",c:1},
+      {l:"NATURALIDADE",v:"NOVA JERUSALÉM",c:1},
+      {l:"DOC. DE ORIGEM",v:"LIVRO DA VIDA",c:1},
+      {l:"DATA DE EXPEDIÇÃO",v:"O DIA QUE NASCEU DE NOVO",c:2},
+      {l:"DATA DE NASCIMENTO",v:"O DIA EM QUE CONFESSOU QUE JESUS CRISTO É O SALVADOR DA SUA VIDA, O FILHO DE DEUS QUE MORREU E AO TERCEIRO DIA RESSUSCITOU.",c:2}
+    ],
+    sign:"Jesus Cristo", signLabel:"ASSINATURA DO DIRETOR", footer:"" },
+  scale:{header:1,verse:1,fields:1,sign:1,photo:1},
+  logo:null
+};
+const clone = o => JSON.parse(JSON.stringify(o));
+function merge(d, v){
+  if (Array.isArray(d)) return Array.isArray(v) ? clone(v) : clone(d);
+  if (d && typeof d === "object"){ const o = {}; for (const k in d) o[k] = merge(d[k], v ? v[k] : undefined); return o; }
+  return (v === undefined || v === null || (typeof v !== typeof d && d !== null)) ? d : v;
+}
+function getK(o, k){ return k.split(".").reduce((a,p)=>a?.[p], o); }
+function setK(o, k, val){ const ps=k.split("."); let a=o; ps.slice(0,-1).forEach(p=>a=a[p]); a[ps.at(-1)] = val; }
+
+/* ---------- desenho do cartão (unidades em mm) ---------- */
+const FONT_UP = '600 # "Barlow Condensed","Arial Narrow",sans-serif';
+const FONT_UPB = '700 # "Barlow Condensed","Arial Narrow",sans-serif';
+const FONT_VAL = '500 # "Barlow Condensed","Arial Narrow",sans-serif';
+const FONT_SIG = '700 # "Caveat","Comic Sans MS",cursive';
+const FONT_SIG2 = '400 # "Great Vibes","Brush Script MT",cursive';
+function setFont(ctx, spec, mm){ ctx.font = spec.replace("#", (mm*ctx._s).toFixed(2)+"px"); }
+function mw(ctx, t){ return ctx.measureText(t).width / ctx._s; }
+function txt(ctx, t, x, y){ ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.fillText(t, x*ctx._s, y*ctx._s); ctx.restore(); }
+function wrap(ctx, text, maxW){
+  const out=[];
+  for (const para of String(text).split("\n")){
+    const words = para.split(/\s+/).filter(Boolean); let line="";
+    for (const w of words){ const t = line ? line+" "+w : w; if (!line || mw(ctx,t) <= maxW) line=t; else { out.push(line); line=w; } }
+    out.push(line);
+  }
+  return out;
+}
+function fit(ctx, text, spec, maxW, maxH, maxSize, minSize, lh=1.12){
+  let size = maxSize, lines;
+  for (;;){
+    setFont(ctx, spec, size); lines = wrap(ctx, text, maxW);
+    const ok = lines.length*size*lh <= maxH && lines.every(l => mw(ctx,l) <= maxW);
+    if (ok || size <= minSize) break; size *= 0.94;
+  }
+  return {lines, size, lh, spec};
+}
+function drawFit(ctx, r, x, y, w, h, align="left", valign="top"){
+  setFont(ctx, r.spec, r.size); ctx.textAlign = align; ctx.textBaseline = "alphabetic";
+  const total = r.lines.length * r.size * r.lh;
+  const y0 = y + (valign==="middle" ? (h-total)/2 : valign==="bottom" ? h-total : 0);
+  const ax = align==="center" ? x+w/2 : align==="right" ? x+w : x;
+  r.lines.forEach((l,i)=> txt(ctx, l, ax, y0 + r.size*(i*r.lh + 0.8)));
+  return total;
+}
+function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,w,h,r) : ctx.rect(x,y,w,h); }
+function hexA(hex, a){ const n=parseInt(hex.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+
+function drawBase(ctx, c, W, H, u){
+  const b = 3*u, col = c.colors;
+  ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,W,H);
+  ctx.save(); rr(ctx,0,0,W,H,2.6*u); ctx.clip();
+  ctx.fillStyle = col.border; ctx.fillRect(0,0,W,H);
+  ctx.lineWidth = 0.13*u; ctx.strokeStyle = "rgba(255,255,255,.22)";
+  for (let i=0;i<=22;i++){ ctx.beginPath(); for (let x=0;x<=W;x+=0.6){ const y=(i/22)*H + Math.sin(x*0.8+i*1.7)*1.1*u; x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);} ctx.stroke(); }
+  ctx.strokeStyle = "rgba(0,0,0,.10)";
+  for (let i=0;i<=22;i++){ ctx.beginPath(); for (let x=0;x<=W;x+=0.6){ const y=(i/22)*H + Math.cos(x*0.6+i)*1.0*u+0.6*u; x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);} ctx.stroke(); }
+  ctx.restore();
+  // anéis na borda
+  ctx.strokeStyle="rgba(255,255,255,.85)"; ctx.lineWidth=0.22*u;
+  for (let x=7*u; x<W-5*u; x+=10*u){ for (const y of [b/2, H-b/2]){ ctx.beginPath(); ctx.arc(x,y,0.6*u,0,Math.PI*2); ctx.stroke(); } }
+  for (let y=9*u; y<H-7*u; y+=10*u){ for (const x of [b/2, W-b/2]){ ctx.beginPath(); ctx.arc(x,y,0.6*u,0,Math.PI*2); ctx.stroke(); } }
+  // painel
+  ctx.save(); rr(ctx,b,b,W-2*b,H-2*b,1.4*u); ctx.fillStyle=col.panel; ctx.fill(); ctx.clip();
+  const cx=W*0.62, cy=H*0.5; ctx.strokeStyle=hexA(col.label,0.10); ctx.lineWidth=0.12*u;
+  for (let k=0;k<16;k++){ ctx.beginPath(); const R=(4+k*1.6)*u; for (let a=0;a<=Math.PI*2+0.01;a+=0.04){ const r=R+Math.sin(a*12+k)*0.6*u; const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r*0.8; a===0?ctx.moveTo(x,y):ctx.lineTo(x,y);} ctx.stroke(); }
+  ctx.restore();
+}
+function pill(ctx, c, text, x, y, w, h, s){
+  if (!text) return;
+  rr(ctx,x,y,w,h,h/2); ctx.fillStyle="#ffffff"; ctx.fill();
+  ctx.fillStyle = c.colors.label;
+  const r = fit(ctx, text.toUpperCase(), FONT_UPB, w-h, h*0.9, h*0.62*s, h*0.25);
+  drawFit(ctx, r, x+h/2, y, w-h, h, "center", "middle");
+}
+function drawLogo(ctx, c, x, y, s){
+  if (c._logoImg){ const im=c._logoImg; const k=Math.min(s/im.width, s/im.height); const w=im.width*k, h=im.height*k; ctx.drawImage(im, x+(s-w)/2, y+(s-h)/2, w, h); return; }
+  const cx=x+s/2, cy=y+s/2, cols=["#2f9a48","#f0bf2c","#d6402a","#2a2a2a"];
+  for (let i=0;i<4;i++){ ctx.save(); ctx.translate(cx,cy); ctx.rotate(i*Math.PI/2 - Math.PI/4);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(s*0.42,-s*0.22,s*0.48,0); ctx.quadraticCurveTo(s*0.2,s*0.06,0,0); ctx.fillStyle=cols[i]; ctx.fill(); ctx.restore(); }
+}
+function drawPhoto(ctx, c, img, x, y, w, h, u){
+  ctx.save(); rr(ctx,x,y,w,h,0.9*u); ctx.clip();
+  if (img){ const iw=img.width, ih=img.height, k=Math.max(w/iw, h/ih); const sw=w/k, sh=h/k; ctx.drawImage(img,(iw-sw)/2,(ih-sh)/2,sw,sh,x,y,w,h); }
+  else {
+    ctx.fillStyle="#e6ebe4"; ctx.fillRect(x,y,w,h); ctx.fillStyle="#c3ccc0";
+    ctx.beginPath(); ctx.arc(x+w/2, y+h*0.4, w*0.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x+w/2, y+h*1.02, w*0.42, h*0.36, 0, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+  rr(ctx,x,y,w,h,0.9*u); ctx.strokeStyle=hexA(c.colors.text,0.25); ctx.lineWidth=0.15*u; ctx.stroke();
+}
+function drawFinger(ctx, x, y, w, h, u){
+  rr(ctx,x,y,w,h,0.8*u); ctx.fillStyle="#ffffff"; ctx.fill();
+  const cx=x+w/2, cy=y+h*0.52, rx=w*0.40, ry=h*0.42;
+  ctx.save(); ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); ctx.clip();
+  ctx.strokeStyle="#262626"; ctx.lineWidth=Math.max(w*0.016,0.09);
+  let seed=7; const rnd=()=> (seed=(seed*9301+49297)%233280)/233280;
+  for (let k=1;k<=28;k++){ const t=k/25;
+    let a=rnd()*0.6, drawing=true; ctx.beginPath(); let started=false;
+    for (; a<Math.PI*2+0.6; a+=0.05){
+      if (rnd()<0.008) { drawing=!drawing; started=false; }
+      const r=t*(1+0.05*Math.sin(3*a+k)+0.03*Math.sin(7*a+k*1.3));
+      const px=cx+rx*r*Math.cos(a), py=cy-h*0.05*t+ry*r*Math.sin(a)*(Math.sin(a)<0?1.1:0.95);
+      if (!drawing) continue; if (!started){ ctx.moveTo(px,py); started=true; } else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.fillStyle="#ffffff"; const vw=w*0.15, vh=h*0.62, hw=w*0.5, hh=w*0.15;
+  ctx.fillRect(cx-vw/2, cy-vh*0.55, vw, vh); ctx.fillRect(cx-hw/2, cy-vh*0.55+vh*0.28-hh/2, hw, hh);
+}
+function fill(s, d){ return String(s||"").replace(/\{nome\}/gi, (d.nome||"").toUpperCase()).replace(/\{filho\}/gi, d.genero==="M"?"Filho":"Filha"); }
+
+function drawFront(ctx, c, d){
+  const W=c.card.w, H=c.card.h, u=H/54, b=3*u, pad=2*u, S=c.scale, col=c.colors;
+  drawBase(ctx,c,W,H,u);
+  const ph0 = 3.6*u;
+  pill(ctx,c,c.front.header, W*0.17, b-ph0/2, W*0.66, ph0, S.header);
+  const ix0=b+pad, iy0=b+3.2*u, ix1=W-b-pad, iy1=H-b-(c.front.footer?3.2*u:2*u);
+  const ih=iy1-iy0; let pw=ih*0.75*S.photo; pw=Math.min(pw,(ix1-ix0)*0.45); const ph=Math.min(ih, pw/0.75);
+  drawPhoto(ctx,c,d.foto, ix0, iy0+(ih-ph)/2, pw, ph, u);
+  const rx=ix0+pw+2.4*u, rw=ix1-rx;
+  const ls=Math.min(9*u, rw*0.24); drawLogo(ctx,c, ix1-ls, iy0, ls);
+  ctx.fillStyle=col.label;
+  const vw=rw-ls-1.2*u, vh=ih*0.44;
+  const vr=fit(ctx, fill(c.front.verse,d).toUpperCase(), FONT_UP, vw, vh, 2.25*u*S.verse, 0.9*u, 1.08);
+  const used=drawFit(ctx, vr, rx, iy0, vw, vh);
+  if (c.front.ref){ const rr2=fit(ctx, c.front.ref.toUpperCase(), FONT_UPB, vw, 3*u, Math.max(vr.size*1.05,1.6*u), 0.9*u); drawFit(ctx, rr2, rx, iy0+used+0.5*u, vw, 3*u); }
+  let sx=rx;
+  if (c.front.finger){ const fw=Math.min(rw*0.3, 11.5*u), fh=Math.min(fw*1.22, ih*0.48); drawFinger(ctx, rx, iy1-fh, fw, fh, u); sx=rx+fw+2*u; }
+  const sw=ix1-sx, lineY=iy1-2.6*u;
+  const sig=fill(d.genero==="M"?c.front.signM:c.front.signF, d);
+  ctx.fillStyle=col.text;
+  const sr=fit(ctx, sig, FONT_SIG, sw, 9*u, 8*u*S.sign, 2*u, 1);
+  drawFit(ctx, sr, sx, lineY-9.2*u, sw, 9*u, "center", "bottom");
+  ctx.strokeStyle=col.label; ctx.lineWidth=0.18*u; ctx.beginPath(); ctx.moveTo(sx+0.5*u,lineY); ctx.lineTo(ix1,lineY); ctx.stroke();
+  ctx.fillStyle=col.label; const lr=fit(ctx,(c.front.signLabel||"").toUpperCase(),FONT_UPB,sw,2.2*u,1.45*u*S.header,0.8*u); drawFit(ctx,lr,sx,lineY+0.5*u,sw,2*u,"center");
+  if (c.front.footer){ const fw2=W*0.44; pill(ctx,c,c.front.footer, W-b-pad-fw2, H-b-ph0/2, fw2, ph0, S.header); }
+}
+function drawBack(ctx, c, d){
+  const W=c.card.w, H=c.card.h, u=H/54, b=3*u, pad=2.2*u, S=c.scale, col=c.colors;
+  drawBase(ctx,c,W,H,u);
+  const ph0=3.6*u;
+  pill(ctx,c,c.back.header, W*0.17, b-ph0/2, W*0.66, ph0, S.header);
+  const ix0=b+pad, iy0=b+3*u, ix1=W-b-pad, iy1=H-b-(c.back.footer?3.4*u:1.8*u);
+  const iw=ix1-ix0, ih=iy1-iy0;
+  const cols=[{x:ix0,w:iw*0.46},{x:ix0+iw*0.5,w:iw*0.5}];
+  const f1=c.back.fields.filter(f=>+f.c!==2), f2=c.back.fields.filter(f=>+f.c===2);
+  const labelH=1.5*u*S.fields;
+  const drawCol=(list, col0, top, height)=>{
+    if (!list.length) return;
+    const weights=list.map(f=>1+Math.min(2.2, fill(f.v,d).length/60)); const tw=weights.reduce((a,b)=>a+b,0);
+    let y=top;
+    list.forEach((f,i)=>{ const sh=height*weights[i]/tw;
+      ctx.fillStyle=col.label; setFont(ctx,FONT_UPB,labelH); ctx.textAlign="left"; txt(ctx,(f.l||"").toUpperCase(),col0.x,y+labelH*0.85);
+      ctx.fillStyle=col.text; const vr=fit(ctx, fill(f.v,d).toUpperCase(), FONT_VAL, col0.w, sh-labelH-0.9*u, 3.5*u*S.fields, 0.9*u, 1.08);
+      drawFit(ctx, vr, col0.x, y+labelH+0.35*u, col0.w, sh-labelH-0.9*u);
+      y+=sh; });
+  };
+  drawCol(f1, cols[0], iy0, ih);
+  const sigH = c.back.sign ? Math.min(ih*0.34, 13*u) : 0;
+  drawCol(f2, cols[1], iy0, ih - sigH);
+  if (c.back.sign){
+    const c2=cols[1], lineY=iy1-2.4*u;
+    ctx.fillStyle=col.text; const sr=fit(ctx,c.back.sign,FONT_SIG2,c2.w,sigH-2.6*u,7*u*S.sign,2*u,1); drawFit(ctx,sr,c2.x,lineY-(sigH-2.2*u),c2.w,sigH-2.6*u,"center","bottom");
+    ctx.strokeStyle=col.label; ctx.lineWidth=0.18*u; ctx.beginPath(); ctx.moveTo(c2.x,lineY); ctx.lineTo(c2.x+c2.w,lineY); ctx.stroke();
+    ctx.fillStyle=col.label; const lr=fit(ctx,(c.back.signLabel||"").toUpperCase(),FONT_UPB,c2.w,2*u,1.4*u*S.header,0.8*u); drawFit(ctx,lr,c2.x,lineY+0.45*u,c2.w,2*u,"center");
+  }
+  if (c.back.footer){ const fw2=W*0.5; pill(ctx,c,c.back.footer,(W-fw2)/2,H-b-ph0/2,fw2,ph0,S.header); }
+}
+function renderSide(canvas, side, c, d, s){
+  canvas.width=Math.round(c.card.w*s); canvas.height=Math.round(c.card.h*s);
+  const ctx=canvas.getContext("2d"); ctx._s=s; ctx.setTransform(s,0,0,s,0,0);
+  (side==="F"?drawFront:drawBack)(ctx,c,d);
+}
+function previewTo(canvas, side, c, d){
+  const cssW = canvas.clientWidth || canvas.parentElement.clientWidth || 400;
+  const s = cssW*Math.min(window.devicePixelRatio||1, 2.5)/c.card.w;
+  renderSide(canvas, side, c, d, s);
+}
+
+/* ---------- distribuição na A4 ---------- */
+function layoutA4(c){
+  const {w,h,gap,margin}=c.card; let best=null;
+  for (const orient of ["p","l"]) for (const rot of [false,true]){
+    const PW=orient==="p"?210:297, PH=orient==="p"?297:210, cw=rot?h:2*w, ch=rot?2*w:h;
+    const cols=Math.floor((PW-2*margin+gap)/(cw+gap)), rows=Math.floor((PH-2*margin+gap)/(ch+gap)), n=Math.max(0,cols)*Math.max(0,rows);
+    if (n>0 && (!best || n>best.per)){
+      const gw=cols*cw+(cols-1)*gap, gh=rows*ch+(rows-1)*gap, x0=(PW-gw)/2, y0=(PH-gh)/2, pos=[];
+      for (let r=0;r<rows;r++) for (let k=0;k<cols;k++) pos.push({x:x0+k*(cw+gap), y:y0+r*(ch+gap)});
+      best={orient,rot,cols,rows,per:n,cw,ch,pos,PW,PH};
+    }
+  }
+  return best;
+}
+function drawA4(canvas, c){
+  const L=layoutA4(c); const ctx=canvas.getContext("2d");
+  if (!L){ canvas.width=210; canvas.height=297; ctx.fillStyle="#fff"; ctx.fillRect(0,0,210,297); return null; }
+  canvas.width=L.PW; canvas.height=L.PH; ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,L.PW,L.PH);
+  L.pos.forEach(p=>{
+    ctx.fillStyle=c.colors.border; ctx.fillRect(p.x,p.y,L.cw,L.ch);
+    ctx.fillStyle=hexA(c.colors.border,0.45);
+    if (L.rot) ctx.fillRect(p.x,p.y+c.card.w,L.cw,c.card.w); else ctx.fillRect(p.x+c.card.w,p.y,c.card.w,L.ch);
+  });
+  canvas.style.width = (L.orient==="p"?96:136)+"px";
+  return L;
+}
+
+/* ---------- dados guardados neste aparelho (IndexedDB) ---------- */
+function openIdb(){ return new Promise((res,rej)=>{ const r=indexedDB.open("rg-do-reino",1);
+  r.onupgradeneeded=()=>{ const d=r.result; ["rgs","fotos","conf"].forEach(n=>{ if(!d.objectStoreNames.contains(n)) d.createObjectStore(n); }); };
+  r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+function idbDo(d, name, mode, fn){ return new Promise((res,rej)=>{ const t=d.transaction(name,mode); const req=fn(t.objectStore(name)); t.oncomplete=()=>res(req?req.result:undefined); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); }); }
+function makeIdbStore(d){
+  const qs=new Set(), cs=new Set();
+  const emitQ=async()=>{ const arr=(await idbDo(d,"rgs","readonly",s=>s.getAll())).sort((a,b)=>a.criado-b.criado); qs.forEach(f=>f(arr)); };
+  return {
+    mode:"idb",
+    onQueue(f){ qs.add(f); emitQ(); },
+    async onConfig(f){ cs.add(f); f(await idbDo(d,"conf","readonly",s=>s.get("modelo"))||null); },
+    async add(rg, foto, id){ id=id||("rg"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)); await idbDo(d,"fotos","readwrite",s=>s.put(foto,id)); await idbDo(d,"rgs","readwrite",s=>s.put({...rg,id,foto:id},id)); emitQ(); return id; },
+    async update(id, patch){ const cur=await idbDo(d,"rgs","readonly",s=>s.get(id)); if(!cur) return; await idbDo(d,"rgs","readwrite",s=>s.put({...cur,...patch},id)); emitQ(); },
+    async remove(id){ await idbDo(d,"rgs","readwrite",s=>s.delete(id)); await idbDo(d,"fotos","readwrite",s=>s.delete(id)); emitQ(); },
+    async getFoto(id){ return await idbDo(d,"fotos","readonly",s=>s.get(id)); },
+    async saveConfig(c){ await idbDo(d,"conf","readwrite",s=>s.put(c,"modelo")); cs.forEach(f=>f(c)); }
+  };
+}
+function makeMemStore(){
+  const rgs={}, fotos={}; let conf=null; const qs=new Set(), cs=new Set();
+  const emitQ=()=>{ const arr=Object.values(rgs).sort((a,b)=>a.criado-b.criado); qs.forEach(f=>f(arr)); };
+  return { mode:"mem", onQueue(f){ qs.add(f); setTimeout(emitQ,0); }, onConfig(f){ cs.add(f); setTimeout(()=>f(conf),0); },
+    async add(rg,foto,id){ id=id||("rg"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)); fotos[id]=foto; rgs[id]={...rg,id,foto:id}; emitQ(); return id; },
+    async update(id,p){ if(rgs[id]) rgs[id]={...rgs[id],...p}; emitQ(); }, async remove(id){ delete rgs[id]; delete fotos[id]; emitQ(); },
+    async getFoto(id){ return fotos[id]; }, async saveConfig(c){ conf=c; cs.forEach(f=>f(c)); } };
+}
+
+/* ---------- estado ---------- */
+let store = null, cfg = clone(DEF), draft = clone(DEF), dirty = false, canEditModel = true;
+let queue = [], filter = "fila", selected = new Set(), lastPrinted = [];
+const $ = s => document.querySelector(s);
+const imgCache = new Map();
+function loadImg(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
+async function attachLogo(c){ if (c.logo){ try{ c._logoImg = imgCache.get(c.logo) || await loadImg(c.logo); imgCache.set(c.logo,c._logoImg); }catch(e){ c._logoImg=null; } } else c._logoImg=null; return c; }
+function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),2600); }
+function setStatus(ok, m){ $("#sdot").classList.toggle("ok", ok); $("#stxt").textContent=m; }
+function errMsg(e){
+  const c=e&&e.code;
+  if (e && e.name==="QuotaExceededError") return "O espaço do aparelho acabou. Exclua RGs já impressos e tente de novo.";
+  return "Não foi possível salvar neste aparelho. Tente de novo.";
+}
+
+/* ---------- abas ---------- */
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+function showTab(t){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===t));
+  $("#view-cad").hidden = t!=="cad"; $("#view-fila").hidden = t!=="fila"; $("#view-mod").hidden = t!=="mod";
+  try{ localStorage.setItem("rg_tab", t); }catch(e){}
+  requestAnimationFrame(()=>{ if (t==="cad") renderCadPreview(); if (t==="mod") renderModPreview(); if (t==="fila") renderFila(); });
+}
+
+/* ---------- captura e recorte ---------- */
+const crop = { img:null, zoom:1, ox:0, oy:0, rot:0 };
+const cropC = $("#crop"), cctx = cropC.getContext("2d");
+function srcDims(){ const r=crop.rot%180!==0; return r?[crop.img.height,crop.img.width]:[crop.img.width,crop.img.height]; }
+function drawCrop(){
+  cctx.setTransform(1,0,0,1,0,0); cctx.fillStyle="#e9ede7"; cctx.fillRect(0,0,600,800);
+  if (!crop.img) return;
+  const [iw,ih]=srcDims(); const base=Math.max(600/iw,800/ih)*crop.zoom; const dw=iw*base, dh=ih*base;
+  const mx=(dw-600)/2, my=(dh-800)/2; crop.ox=Math.max(-mx,Math.min(mx,crop.ox)); crop.oy=Math.max(-my,Math.min(my,crop.oy));
+  cctx.translate(300+crop.ox, 400+crop.oy); cctx.rotate(crop.rot*Math.PI/180);
+  const w0=crop.img.width*base, h0=crop.img.height*base; cctx.drawImage(crop.img,-w0/2,-h0/2,w0,h0);
+  cctx.setTransform(1,0,0,1,0,0);
+}
+async function onFile(file){
+  if (!file) return;
+  try{
+    const url=URL.createObjectURL(file); const im=await loadImg(url);
+    const k=Math.min(1, 1800/Math.max(im.width,im.height)); const cv=document.createElement("canvas"); cv.width=Math.round(im.width*k); cv.height=Math.round(im.height*k);
+    cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height); URL.revokeObjectURL(url);
+    crop.img=cv; crop.zoom=1; crop.ox=0; crop.oy=0; crop.rot=0; $("#zoom").value=1;
+    $("#cropEmpty").hidden=true; $("#guide").hidden=false; $("#cropCtl").hidden=false;
+    drawCrop(); updateCad();
+  }catch(e){ toast("Não consegui abrir essa imagem. Tente outra foto."); }
+}
+$("#fCam").addEventListener("change",e=>{ onFile(e.target.files[0]); e.target.value=""; });
+$("#fGal").addEventListener("change",e=>{ onFile(e.target.files[0]); e.target.value=""; });
+$("#zoom").addEventListener("input",e=>{ crop.zoom=+e.target.value; drawCrop(); schedCad(); });
+$("#rot").addEventListener("click",()=>{ crop.rot=(crop.rot+90)%360; crop.ox=crop.oy=0; drawCrop(); schedCad(); });
+let drag=null;
+cropC.addEventListener("pointerdown",e=>{ if(!crop.img) return; drag={x:e.clientX,y:e.clientY,ox:crop.ox,oy:crop.oy}; cropC.setPointerCapture(e.pointerId); });
+cropC.addEventListener("pointermove",e=>{ if(!drag) return; const k=600/cropC.clientWidth; crop.ox=drag.ox+(e.clientX-drag.x)*k; crop.oy=drag.oy+(e.clientY-drag.y)*k; drawCrop(); schedCad(); });
+["pointerup","pointercancel"].forEach(ev=>cropC.addEventListener(ev,()=>{ drag=null; }));
+
+let genero="F";
+$("#gF").addEventListener("click",()=>{ genero="F"; updateCad(); });
+$("#gM").addEventListener("click",()=>{ genero="M"; updateCad(); });
+$("#nome").addEventListener("input", ()=>updateCad());
+let cadRaf=0; function schedCad(){ cancelAnimationFrame(cadRaf); cadRaf=requestAnimationFrame(renderCadPreview); }
+function updateCad(){
+  $("#gF").setAttribute("aria-pressed", genero==="F"); $("#gM").setAttribute("aria-pressed", genero==="M");
+  const nome=$("#nome").value.trim(), ok = !!crop.img && nome.length>0;
+  $("#enviar").disabled = !ok || !store;
+  $("#cadHint").textContent = !store ? "Conectando…" : ok ? "Tudo certo. O RG vai direto para a fila." : !crop.img && !nome ? "Falta a foto e o nome." : !crop.img ? "Falta a foto." : "Falta o nome.";
+  schedCad();
+}
+function renderCadPreview(){
+  if ($("#view-cad").hidden) return;
+  const d={nome:$("#nome").value.trim()||"Nome", genero, foto: crop.img?cropC:null};
+  previewTo($("#pvF"),"F",cfg,d); previewTo($("#pvB"),"B",cfg,d);
+}
+function exportFoto(){
+  let q=0.82, url=cropC.toDataURL("image/jpeg",q);
+  while (url.length>230000 && q>0.4){ q-=0.1; url=cropC.toDataURL("image/jpeg",q); }
+  if (url.length>230000){ const s=document.createElement("canvas"); s.width=420; s.height=560; s.getContext("2d").drawImage(cropC,0,0,420,560); url=s.toDataURL("image/jpeg",0.75); }
+  return url;
+}
+$("#enviar").addEventListener("click", async ()=>{
+  const nome=$("#nome").value.trim(); if (!nome || !crop.img || !store) return;
+  const btn=$("#enviar"); btn.disabled=true; btn.textContent="Enviando…";
+  try{
+    await store.add({nome, genero, status:"fila", criado:Date.now()}, exportFoto());
+    if (pcId){ toast(pcConn && pcConn.open ? `Enviando ${nome} ao computador…` : `${nome} salvo. Vai para o computador quando conectar.`); flushPending(); }
+    else toast(`${nome} está na fila`);
+    crop.img=null; drawCrop(); $("#cropEmpty").hidden=false; $("#guide").hidden=true; $("#cropCtl").hidden=true;
+    $("#nome").value=""; genero="F";
+  }catch(e){ toast(errMsg(e)); }
+  btn.textContent="Enviar para a fila de impressão"; updateCad();
+});
+
+/* ---------- fila ---------- */
+document.querySelectorAll(".filters .chip").forEach(b=>b.addEventListener("click",()=>{ filter=b.dataset.f; document.querySelectorAll(".filters .chip").forEach(x=>x.setAttribute("aria-pressed", x===b)); selected.clear(); renderFila(); }));
+$("#selAll").addEventListener("change", e=>{ const vis=visibleItems(); selected = e.target.checked ? new Set(vis.map(r=>r.id)) : new Set(); renderFila(); });
+function pdfTargets(){ return selected.size ? queue.filter(r=>selected.has(r.id)) : queue.filter(r=>(r.status||"fila")==="fila"); }
+function visibleItems(){ return filter==="todos" ? queue : queue.filter(r=>(r.status||"fila")===filter); }
+const openRows=new Set(), editRows=new Set(), confirmDel=new Set();
+function fmtHora(t){ try{ return new Date(t).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}); }catch(e){ return ""; } }
+function renderStats(){
+  const wait=queue.filter(r=>(r.status||"fila")==="fila").length, done=queue.length-wait;
+  $("#tabCount").textContent=wait; $("#stWait").textContent=wait; $("#stDone").textContent=done;
+  const L=layoutA4(cfg); const per=L?L.per:0;
+  $("#stPer").textContent=per; $("#stSheets").textContent= per? Math.ceil(wait/per):"–";
+}
+function renderFila(){
+  renderStats();
+  const L=drawA4($("#a4"), cfg);
+  $("#a4txt").textContent = L ? `Cabem ${L.per} RGs por folha A4 (${L.orient==="p"?"retrato":"paisagem"}), cada um com frente e verso lado a lado. Corte pelo contorno, dobre na linha tracejada e plastifique.` : "Esse tamanho de cartão não cabe numa folha A4. Ajuste na aba Modelo.";
+  if ($("#view-fila").hidden) return;
+  const list=$("#list"), vis=visibleItems();
+  for (const id of [...selected]) if (!vis.some(r=>r.id===id)) selected.delete(id);
+  $("#selAll").checked = vis.length>0 && selected.size===vis.length;
+  const nTarget = pdfTargets().length;
+  ["#gerar","#baixar","#enviarPdf"].forEach(k=>$(k).disabled = nTarget===0 || !L);
+  $("#gerar").textContent = selected.size ? `Imprimir ${selected.size} selecionado${selected.size>1?"s":""}` : nTarget ? `Imprimir todos aguardando (${nTarget})` : "Nada aguardando impressão";
+  if (!vis.length){
+    list.innerHTML = `<div class="emptystate"><b>${filter==="impresso"?"Nenhum RG impresso ainda":"Nenhum RG nesta lista"}</b>${filter==="fila"?"Os RGs cadastrados neste aparelho aparecem aqui. Cadastre o primeiro na aba Cadastrar.":"Depois de imprimir, marque os RGs como impressos para eles virem para cá."}</div>`;
+    return;
+  }
+  list.innerHTML="";
+  vis.forEach(r=>{
+    const el=document.createElement("div"); el.className="item";
+    const st=(r.status||"fila");
+    el.innerHTML = `<input type="checkbox" id="sel-${r.id}" aria-label="Selecionar ${esc(r.nome)}" ${selected.has(r.id)?"checked":""}>
+      <div class="avatar">${esc((r.nome||"?").trim().charAt(0).toUpperCase())}</div>
+      <div style="min-width:0"><div class="nm">${esc(r.nome)}</div>
+        <div class="meta"><span class="pill ${st==="fila"?"wait":"done"}">${st==="fila"?"Aguardando":"Impresso"}</span><span>${r.genero==="M"?"Menino":"Menina"}</span><span>${fmtHora(r.criado)}</span>${pcId?`<span>${r.enviado?"✓ no computador":"ainda não enviado"}</span>`:""}</div></div>
+      <div class="acts">
+        <button class="btn small" data-a="ver">${openRows.has(r.id)?"Fechar":"Ver"}</button>
+        <button class="btn small" data-a="edit">Editar</button>
+        ${st==="impresso"?'<button class="btn small" data-a="refila">Voltar para fila</button>':""}
+        ${confirmDel.has(r.id)?'<button class="btn small danger" data-a="delok">Confirmar exclusão</button><button class="btn small" data-a="delno">Cancelar</button>':'<button class="btn small danger" data-a="del">Excluir</button>'}
+      </div>`;
+    if (editRows.has(r.id)){
+      const er=document.createElement("div"); er.className="edit-row";
+      er.innerHTML=`<input type="text" id="ed-${r.id}" value="${esc(r.nome)}" maxlength="40" aria-label="Nome">
+        <div class="seg"><button type="button" data-g="F" aria-pressed="${r.genero!=="M"}">Menina</button><button type="button" data-g="M" aria-pressed="${r.genero==="M"}">Menino</button></div>
+        <button class="btn small primary" data-a="save">Salvar</button>`;
+      let g=r.genero||"F";
+      er.querySelectorAll("[data-g]").forEach(b=>b.addEventListener("click",()=>{ g=b.dataset.g; er.querySelectorAll("[data-g]").forEach(x=>x.setAttribute("aria-pressed",x===b)); }));
+      er.querySelector('[data-a="save"]').addEventListener("click", async ()=>{ const nm=er.querySelector("input").value.trim(); if(!nm) return; try{ await store.update(r.id,{nome:nm, genero:g}); editRows.delete(r.id); toast("Alteração salva"); renderFila(); }catch(e){ toast(errMsg(e)); } });
+      el.appendChild(er);
+    }
+    if (openRows.has(r.id)){
+      const det=document.createElement("div"); det.className="item-detail";
+      const cf=document.createElement("canvas"), cb=document.createElement("canvas"); det.append(cf,cb); el.appendChild(det);
+      requestAnimationFrame(async ()=>{ let img=null; try{ const src=await store.getFoto(r.foto||r.id); if(src) img=await loadImg(src); }catch(e){} const d={nome:r.nome,genero:r.genero,foto:img}; previewTo(cf,"F",cfg,d); previewTo(cb,"B",cfg,d); });
+    }
+    el.querySelector('input[type=checkbox]').addEventListener("change",e=>{ e.target.checked?selected.add(r.id):selected.delete(r.id); renderFila(); });
+    el.querySelectorAll(".acts [data-a]").forEach(b=>b.addEventListener("click", async ()=>{
+      const a=b.dataset.a;
+      if (a==="ver") openRows.has(r.id)?openRows.delete(r.id):openRows.add(r.id);
+      if (a==="edit") editRows.has(r.id)?editRows.delete(r.id):editRows.add(r.id);
+      if (a==="del") confirmDel.add(r.id);
+      if (a==="delno") confirmDel.delete(r.id);
+      if (a==="delok"){ confirmDel.delete(r.id); try{ await store.remove(r.id); toast(`${r.nome} foi excluído`);}catch(e){ toast(errMsg(e)); } }
+      if (a==="refila"){ try{ await store.update(r.id,{status:"fila"}); }catch(e){ toast(errMsg(e)); } }
+      renderFila();
+    }));
+    list.appendChild(el);
+  });
+}
+function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+async function renderPages(items, onProg){
+  const L=layoutA4(cfg), S=11.811, W=cfg.card.w;
+  const fc=document.createElement("canvas"), bc=document.createElement("canvas"), pair=document.createElement("canvas"), rotc=document.createElement("canvas");
+  const pages=[]; let pg=null, pctx=null;
+  const flush=()=>{ if(pg) pages.push(pg.toDataURL("image/jpeg",0.93)); };
+  for (let i=0;i<items.length;i++){
+    if (i%L.per===0){ flush(); pg=document.createElement("canvas"); pg.width=Math.round(L.PW*S); pg.height=Math.round(L.PH*S); pctx=pg.getContext("2d"); pctx.fillStyle="#fff"; pctx.fillRect(0,0,pg.width,pg.height); }
+    const p=L.pos[i%L.per], it=items[i];
+    renderSide(fc,"F",cfg,it,S); renderSide(bc,"B",cfg,it,S);
+    pair.width=fc.width*2; pair.height=fc.height; const pc=pair.getContext("2d"); pc.drawImage(fc,0,0); pc.drawImage(bc,fc.width,0);
+    let out=pair;
+    if (L.rot){ rotc.width=pair.height; rotc.height=pair.width; const rc=rotc.getContext("2d"); rc.setTransform(1,0,0,1,0,0); rc.translate(rotc.width,0); rc.rotate(Math.PI/2); rc.drawImage(pair,0,0); out=rotc; }
+    pctx.drawImage(out, p.x*S, p.y*S, L.cw*S, L.ch*S);
+    if (cfg.card.cut){
+      pctx.strokeStyle="#999"; pctx.lineWidth=0.15*S; pctx.setLineDash([]); pctx.strokeRect(p.x*S,p.y*S,L.cw*S,L.ch*S);
+      pctx.setLineDash([1.2*S,1.2*S]); pctx.beginPath();
+      if (L.rot){ pctx.moveTo((p.x-2)*S,(p.y+W)*S); pctx.lineTo((p.x+L.cw+2)*S,(p.y+W)*S); } else { pctx.moveTo((p.x+W)*S,(p.y-2)*S); pctx.lineTo((p.x+W)*S,(p.y+L.ch+2)*S); }
+      pctx.stroke(); pctx.setLineDash([]);
+    }
+    onProg && onProg((i+1)/items.length);
+    await new Promise(r=>setTimeout(r,0));
+  }
+  flush();
+  return {pages, L};
+}
+async function pagesToPDF(r){
+  if (!window.jspdf) throw new Error("pdf");
+  const {jsPDF}=window.jspdf, o=r.L.orient==="p"?"portrait":"landscape";
+  const doc=new jsPDF({orientation:o, unit:"mm", format:"a4", compress:true});
+  r.pages.forEach((u,i)=>{ if(i) doc.addPage("a4",o); doc.addImage(u,"JPEG",0,0,r.L.PW,r.L.PH,undefined,"FAST"); });
+  return doc.output("blob");
+}
+async function buildPDF(items, onProg){ return pagesToPDF(await renderPages(items,onProg)); }
+function baixar(blob, name){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 5000); }
+function podeCompartilhar(){ try{ return !!(navigator.canShare && navigator.canShare({files:[new File(["x"],"t.pdf",{type:"application/pdf"})]})); }catch(e){ return false; } }
+async function compartilhar(blob, name){
+  const f=new File([blob], name, {type:"application/pdf"});
+  try{ await navigator.share({files:[f], title:"RGs para imprimir"}); return true; }catch(e){ if (e && e.name!=="AbortError") baixar(blob,name); return e && e.name!=="AbortError"; }
+}
+async function imprimirPaginas(r){
+  const area=$("#printArea"); area.innerHTML="";
+  const land=r.L.orient==="l";
+  $("#pageStyle").textContent=`@page{size:A4 ${land?"landscape":"portrait"};margin:0} #printArea img{width:${r.L.PW}mm;height:${r.L.PH}mm}`;
+  const imgs=r.pages.map(u=>{ const i=new Image(); i.src=u; i.alt=""; area.appendChild(i); return i; });
+  await Promise.all(imgs.map(i=>i.decode ? i.decode().catch(()=>{}) : Promise.resolve()));
+  window.print();
+}
+function stamp(){ const d=new Date(), z=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}-${z(d.getHours())}h${z(d.getMinutes())}`; }
+async function itensDe(rows){ const items=[]; for (const r of rows){ let img=null; try{ const src=await store.getFoto(r.foto||r.id); if (src) img=await loadImg(src); }catch(e){} items.push({nome:r.nome, genero:r.genero, foto:img}); } return items; }
+async function acao(tipo){
+  const ids=pdfTargets(); if (!ids.length) return;
+  ["#gerar","#baixar","#enviarPdf"].forEach(k=>$(k).disabled=true);
+  $("#prog").hidden=false; $("#progBar").style.width="0"; $("#afterPdf").hidden=true;
+  let ok=false;
+  try{
+    const r=await renderPages(await itensDe(ids), f=>$("#progBar").style.width=(f*100)+"%");
+    const name=`rgs-${stamp()}.pdf`;
+    if (tipo==="imprimir"){ await imprimirPaginas(r); ok=true; }
+    else { const blob=await pagesToPDF(r); if (tipo==="enviar") ok=await compartilhar(blob,name); else { baixar(blob,name); ok=true; } }
+    if (ok){ lastPrinted=ids.filter(x=>(x.status||"fila")==="fila").map(x=>x.id); const n=r.pages.length;
+      $("#afterTxt").textContent=`${ids.length} RG${ids.length>1?"s":""} em ${n} folha${n>1?"s":""}. Depois que sair da impressora, marque como impressos.`;
+      $("#marcar").hidden = lastPrinted.length===0; $("#afterPdf").hidden=false; }
+  }catch(e){ toast(e && e.message==="pdf" ? "O gerador de PDF não carregou. Verifique a internet e recarregue." : "Erro ao preparar a impressão"); }
+  $("#prog").hidden=true; renderFila();
+}
+$("#gerar").addEventListener("click", ()=>acao("imprimir"));
+$("#baixar").addEventListener("click", ()=>acao("baixar"));
+$("#enviarPdf").addEventListener("click", ()=>acao("enviar"));
+$("#teste").addEventListener("click", async ()=>{
+  const b=$("#teste"); b.disabled=true;
+  try{ const r=await renderPages([{nome:"Teste", genero:"F", foto:null}]); await imprimirPaginas(r); }catch(e){ toast("Erro ao preparar a folha de teste"); }
+  b.disabled=false;
+});
+$("#exportar").addEventListener("click", async ()=>{
+  try{
+    const rgs=[]; for (const r of queue){ rgs.push({...r, img: await store.getFoto(r.foto||r.id)}); }
+    const data=JSON.stringify({app:"rg-do-reino", v:1, modelo:plainCfg(cfg), rgs});
+    baixar(new Blob([data],{type:"application/json"}), `fila-rg-${stamp()}.json`);
+  }catch(e){ toast("Não foi possível exportar"); }
+});
+$("#importar").addEventListener("change", async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{
+    const j=JSON.parse(await f.text()); if (j.app!=="rg-do-reino") throw 0;
+    const have=new Set(queue.map(r=>r.id)); let n=0;
+    for (const r of (j.rgs||[])){ if (have.has(r.id)) continue; const {img,...rg}=r; await store.add({nome:rg.nome,genero:rg.genero,status:rg.status||"fila",criado:rg.criado||Date.now()}, img, rg.id); n++; }
+    if (j.modelo) await store.saveConfig(j.modelo);
+    toast(`${n} RG${n!==1?"s":""} importado${n!==1?"s":""}`);
+  }catch(err){ toast("Esse arquivo não é uma fila do RG do Reino"); }
+});
+
+$("#marcar").addEventListener("click", async ()=>{
+  const b=$("#marcar"); b.disabled=true;
+  try{ for (const id of lastPrinted) await store.update(id,{status:"impresso", impresso:Date.now()}); toast(`${lastPrinted.length} marcado${lastPrinted.length>1?"s":""} como impresso`); lastPrinted=[]; selected.clear(); $("#afterPdf").hidden=true; }
+  catch(e){ toast(errMsg(e)); }
+  b.disabled=false; renderFila();
+});
+$("#teste").addEventListener("click", async ()=>{
+  const b=$("#teste"); b.disabled=true;
+  try{ const blob=await buildPDF([{nome:"Teste", genero:"F", foto:null}]); await savePDF(blob, "rg-folha-de-teste.pdf"); }catch(e){ toast("Erro ao gerar o PDF"); }
+  b.disabled=false;
+});
+
+/* ---------- modelo ---------- */
+const formInputs=[...document.querySelectorAll("#modForm [data-k]")];
+function fillForm(){
+  formInputs.forEach(el=>{ const v=getK(draft, el.dataset.k); if (el.type==="checkbox") el.checked=!!v; else el.value=v??""; el.disabled=!canEditModel; });
+  renderBFields();
+  $("#logoTxt").textContent = draft.logo ? "Logo enviado." : "Usando logo genérico.";
+  $("#logoIn").disabled = !canEditModel; $("#logoRm").disabled = !canEditModel || !draft.logo;
+  $("#padrao").disabled = !canEditModel; $("#addField").disabled = !canEditModel;
+  document.querySelectorAll("[data-preset]").forEach(b=>b.disabled=!canEditModel);
+  $("#modRO").hidden = canEditModel;
+  syncModButtons();
+}
+function renderBFields(){
+  const box=$("#bfields"); box.innerHTML="";
+  draft.back.fields.forEach((f,i)=>{
+    const row=document.createElement("div"); row.className="bfield";
+    row.innerHTML=`<input type="text" id="bf-l-${i}" aria-label="Rótulo do campo ${i+1}" value="${esc(f.l)}" placeholder="Rótulo">
+      <textarea id="bf-v-${i}" aria-label="Valor do campo ${i+1}" placeholder="Texto">${esc(f.v)}</textarea>
+      <select id="bf-c-${i}" aria-label="Coluna"><option value="1" ${+f.c!==2?"selected":""}>Coluna 1</option><option value="2" ${+f.c===2?"selected":""}>Coluna 2</option></select>
+      <button class="btn small" type="button" aria-label="Remover campo">✕</button>`;
+    const [l,v,c,rm]=row.querySelectorAll("input,textarea,select,button");
+    [l,v,c,rm].forEach(x=>x.disabled=!canEditModel);
+    l.addEventListener("input",()=>{ f.l=l.value; touched(); });
+    v.addEventListener("input",()=>{ f.v=v.value; touched(); });
+    c.addEventListener("change",()=>{ f.c=+c.value; touched(); });
+    rm.addEventListener("click",()=>{ draft.back.fields.splice(i,1); renderBFields(); touched(); });
+    box.appendChild(row);
+  });
+}
+$("#addField").addEventListener("click",()=>{ draft.back.fields.push({l:"NOVO CAMPO",v:"",c:1}); renderBFields(); touched(); });
+formInputs.forEach(el=>el.addEventListener(el.type==="checkbox"||el.type==="color"?"input":"input",()=>{
+  let v = el.type==="checkbox" ? el.checked : (el.type==="number"||el.type==="range") ? parseFloat(el.value) : el.value;
+  if ((el.type==="number"||el.type==="range") && !isFinite(v)) return;
+  if (el.type==="number"){ v=Math.max(+el.min, Math.min(+el.max, v)); }
+  setK(draft, el.dataset.k, v); touched();
+}));
+document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{ const [w,h]=b.dataset.preset.split("x").map(Number); draft.card.w=w; draft.card.h=h; $("#c_w").value=w; $("#c_h").value=h; touched(); }));
+$("#logoIn").addEventListener("change", async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{ const url=URL.createObjectURL(f); const im=await loadImg(url); const k=Math.min(1,420/Math.max(im.width,im.height));
+    const cv=document.createElement("canvas"); cv.width=Math.round(im.width*k); cv.height=Math.round(im.height*k); cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height); URL.revokeObjectURL(url);
+    let data=cv.toDataURL("image/png"); if (data.length>200000) data=cv.toDataURL("image/webp",0.9); if (data.length>200000) { toast("Logo muito pesado. Use uma imagem menor."); return; }
+    draft.logo=data; await attachLogo(draft); $("#logoTxt").textContent="Logo enviado."; $("#logoRm").disabled=false; touched();
+  }catch(err){ toast("Não consegui abrir esse logo."); }
+});
+$("#logoRm").addEventListener("click",()=>{ draft.logo=null; draft._logoImg=null; $("#logoTxt").textContent="Usando logo genérico."; $("#logoRm").disabled=true; touched(); });
+function touched(){ dirty=true; syncModButtons(); schedMod(); }
+function syncModButtons(){
+  $("#salvar").disabled = !dirty || !canEditModel || !store; $("#descartar").disabled = !dirty;
+  const L=layoutA4(draft);
+  $("#modFit").textContent = L ? `Com essas medidas cabem ${L.per} RGs (frente + verso) por folha A4.` : "Esse tamanho não cabe numa folha A4 com frente e verso lado a lado.";
+}
+let modRaf=0; function schedMod(){ cancelAnimationFrame(modRaf); modRaf=requestAnimationFrame(renderModPreview); }
+function renderModPreview(){
+  if ($("#view-mod").hidden) return;
+  const d={nome:"Olivia", genero:"F", foto:null};
+  previewTo($("#mvF"),"F",draft,d); previewTo($("#mvB"),"B",draft,d);
+}
+function plainCfg(c){ const o=clone({...c, _logoImg:undefined}); delete o._logoImg; return o; }
+$("#salvar").addEventListener("click", async ()=>{
+  const b=$("#salvar"); b.disabled=true; b.textContent="Salvando…";
+  try{ await store.saveConfig(plainCfg(draft)); dirty=false; cfg=await attachLogo(merge(DEF, plainCfg(draft))); toast("Modelo salvo"); broadcastModelo(); $("#modMsg").textContent="Modelo salvo neste aparelho. Para levar a outro aparelho, use Exportar fila."; }
+  catch(e){ toast(errMsg(e)); }
+  b.textContent="Salvar modelo"; syncModButtons(); renderAll();
+});
+$("#descartar").addEventListener("click", async ()=>{ draft=await attachLogo(clone(plainCfg(cfg))); dirty=false; fillForm(); renderModPreview(); });
+$("#padrao").addEventListener("click", async ()=>{ draft=clone(DEF); await attachLogo(draft); fillForm(); touched(); $("#modMsg").textContent="Padrão restaurado na prévia. Clique em Salvar modelo para aplicar."; });
+
+function renderAll(){
+  $("#gFtxt").textContent=fill(cfg.front.signF,{genero:"F"}); $("#gMtxt").textContent=fill(cfg.front.signM,{genero:"M"});
+  $("#sizeCap").textContent=`${cfg.card.w} × ${cfg.card.h} mm`;
+  renderCadPreview(); renderFila(); renderModPreview();
+}
+let rz=0; window.addEventListener("resize",()=>{ clearTimeout(rz); rz=setTimeout(renderAll,150); });
+
+
+/* ---------- conexão celular → computador por QR code (PeerJS) ---------- */
+const pcId = new URLSearchParams(location.search).get("pc");
+let peer=null, pcConn=null, conns=new Set(), sending=false;
+function setPair(ok, m){ $("#pdot").classList.toggle("ok", ok); $("#ptxt").textContent=m; }
+function broadcastModelo(){ conns.forEach(c=>{ try{ c.open && c.send({tipo:"modelo", modelo:plainCfg(cfg)}); }catch(e){} }); }
+function startReceiver(){
+  if (!window.Peer){ setPair(false,"Sem internet para conectar"); toast("A conexão precisa de internet. Recarregue a página."); return; }
+  let id=null; try{ id=localStorage.getItem("rg_pc_id"); }catch(e){}
+  if (!id){ id="rgreino-"+Math.random().toString(36).slice(2,10); try{ localStorage.setItem("rg_pc_id",id); }catch(e){} }
+  setPair(false,"Ligando…"); $("#pairOn").hidden=true; $("#pairOff").hidden=false;
+  peer=new Peer(id,{debug:0});
+  peer.on("open",()=>{
+    const url=location.origin+location.pathname+"?pc="+encodeURIComponent(id);
+    const box=$("#qr"); box.innerHTML="";
+    if (window.QRCode) new QRCode(box,{text:url,width:180,height:180,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M}); else box.textContent="Abra o link abaixo no celular";
+    $("#pairLink").textContent=url; setPair(true, conns.size?`${conns.size} celular${conns.size>1?"es":""} conectado${conns.size>1?"s":""}`:"Aguardando celular");
+    try{ localStorage.setItem("rg_recv","1"); }catch(e){}
+  });
+  peer.on("connection", c=>{
+    c.on("open",()=>{ conns.add(c); c.send({tipo:"modelo", modelo:plainCfg(cfg)}); setPair(true,`${conns.size} celular${conns.size>1?"es":""} conectado${conns.size>1?"s":""}`); toast("Celular conectado"); });
+    c.on("data", async m=>{
+      if (!m || m.tipo!=="rg" || !m.id) return;
+      try{ if (!queue.some(r=>r.id===m.id)){ await store.add({nome:String(m.nome||"").slice(0,40), genero:m.genero==="M"?"M":"F", status:"fila", criado:m.criado||Date.now()}, m.img, m.id); toast(`${m.nome} chegou do celular`); }
+           c.send({tipo:"ok", id:m.id}); }catch(e){ try{ c.send({tipo:"erro", id:m.id}); }catch(_){} }
+    });
+    c.on("close",()=>{ conns.delete(c); setPair(true, conns.size?`${conns.size} conectado${conns.size>1?"s":""}`:"Aguardando celular"); });
+  });
+  peer.on("disconnected",()=>{ setTimeout(()=>{ if (peer && !peer.destroyed) peer.reconnect(); },2000); });
+  peer.on("error", e=>{
+    if (e.type==="unavailable-id") setPair(false,"O app já está recebendo em outra aba. Feche a outra aba.");
+    else if (e.type==="network" || e.type==="server-error" || e.type==="socket-error") setPair(false,"Sem conexão com a internet. Tentando de novo…");
+  });
+}
+function stopReceiver(){ try{ peer && peer.destroy(); }catch(e){} peer=null; conns.clear(); $("#qr").innerHTML="O QR code aparece aqui"; $("#pairLink").textContent=""; setPair(false,"Recepção desligada"); $("#pairOn").hidden=false; $("#pairOff").hidden=true; try{ localStorage.removeItem("rg_recv"); }catch(e){} }
+$("#pairOn").addEventListener("click", startReceiver);
+$("#pairOff").addEventListener("click", stopReceiver);
+
+function startSender(){
+  $("#pairPanel").hidden=true; $("#phoneNote").hidden=false;
+  if (!window.Peer){ setStatus(false,"Sem internet: os RGs ficam salvos aqui"); return; }
+  setStatus(false,"Conectando ao computador…");
+  peer=new Peer({debug:0});
+  const connect=()=>{
+    if (!peer || peer.destroyed) return;
+    if (peer.disconnected){ peer.reconnect(); return; }
+    pcConn=peer.connect(pcId,{reliable:true});
+    pcConn.on("open",()=>{ setStatus(true,"Conectado ao computador"); flushPending(); });
+    pcConn.on("data", async m=>{
+      if (m && m.tipo==="modelo" && m.modelo){ dirty=false; await store.saveConfig(m.modelo); }
+      if (m && m.tipo==="ok"){ await store.update(m.id,{enviado:true}); const r=queue.find(x=>x.id===m.id); toast(`${r?r.nome:"RG"} chegou no computador`); }
+    });
+    pcConn.on("close",()=>{ setStatus(false,"Computador desconectado. Tentando de novo…"); setTimeout(connect,3000); });
+  };
+  peer.on("open", connect);
+  peer.on("disconnected",()=>setTimeout(()=>{ if(peer && !peer.destroyed) peer.reconnect(); },2000));
+  peer.on("error", e=>{
+    if (e.type==="peer-unavailable"){ setStatus(false,"Computador não encontrado. Ligue a recepção no PC."); setTimeout(connect,4000); }
+    else if (e.type==="network" || e.type==="server-error" || e.type==="socket-error") setStatus(false,"Sem internet: os RGs ficam salvos aqui");
+  });
+}
+async function flushPending(){
+  if (!pcId || !pcConn || !pcConn.open || sending) return;
+  sending=true;
+  try{ for (const r of queue.filter(x=>!x.enviado)){ const img=await store.getFoto(r.foto||r.id); pcConn.send({tipo:"rg", id:r.id, nome:r.nome, genero:r.genero, criado:r.criado, img}); } }
+  catch(e){}
+  sending=false;
+}
+
+/* ---------- inicialização ---------- */
+async function onConfigData(data){
+  cfg = await attachLogo(merge(DEF, data||{}));
+  if (!dirty){ draft = await attachLogo(clone(plainCfg(cfg))); fillForm(); }
+  
+  renderAll();
+}
+async function start(){
+  fillForm();
+  try{ const t=localStorage.getItem("rg_tab"); if (t && t!=="cad") showTab(t); }catch(e){}
+  if (document.fonts && document.fonts.load){
+    Promise.all([FONT_UP,FONT_UPB,FONT_VAL,FONT_SIG,FONT_SIG2].map(f=>document.fonts.load(f.replace("#","20px")))).then(()=>renderAll()).catch(()=>{});
+  }
+  renderAll();
+  $("#enviarPdf").hidden = !podeCompartilhar();
+  try{ store=makeIdbStore(await openIdb()); setStatus(true,"Salvo neste aparelho"); try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){} }
+  catch(e){ store=makeMemStore(); setStatus(false,"Sem armazenamento: os dados somem ao fechar a página"); }
+  canEditModel=true;
+  store.onQueue(rows=>{ queue=rows; renderStats(); renderFila(); });
+  store.onConfig(onConfigData);
+  if (pcId) startSender();
+  else { let on=false; try{ on=localStorage.getItem("rg_recv")==="1"; }catch(e){} if (on) startReceiver(); }
+  fillForm(); updateCad();
+}
+start();
+</script>
+</body>
+</html>
