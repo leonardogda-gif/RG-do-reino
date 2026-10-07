@@ -76,7 +76,7 @@ input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-vis
 @media (max-width:460px){.capture{grid-template-columns:minmax(0,1fr)}}
 .cropbox{position:relative;width:100%;max-width:260px;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:var(--surface-2);border:1px dashed var(--line);touch-action:none}
 .cropbox canvas{width:100%;height:100%;display:block;cursor:grab}
-.cropbox .guide{position:absolute;left:22%;right:22%;top:14%;bottom:30%;border:2px dashed rgba(255,255,255,.75);border-radius:50%;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.cropbox .guide{position:absolute;left:24%;right:24%;top:12%;bottom:36%;border:2px dashed rgba(255,255,255,.75);border-radius:50%;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
 .cropbox .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:13px;text-align:center;padding:12px;pointer-events:none}
 .file-btn{position:relative;overflow:hidden}
 .file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
@@ -178,9 +178,10 @@ input[type=range]{width:100%;accent-color:var(--green)}
           <label class="btn file-btn">Escolher da galeria<input id="fGal" type="file" accept="image/*"></label>
           <div id="cropCtl" hidden style="display:flex;flex-direction:column;gap:8px">
             <label class="lbl" for="zoom">Aproximar</label>
-            <input id="zoom" type="range" min="1" max="3" step="0.01" value="1">
+            <input id="zoom" type="range" min="1" max="4" step="0.01" value="1">
             <button class="btn small" id="rot" type="button">Girar 90°</button>
-            <p class="hint">Arraste a foto para centralizar o rosto no oval.</p>
+            <button class="btn small" id="autoAj" type="button">Enquadrar rosto de novo</button>
+            <p class="hint">O quadro inteiro vai para o RG. Arraste e use dois dedos (ou o controle acima) até o rosto preencher o oval.</p>
           </div>
         </div>
       </div>
@@ -196,6 +197,7 @@ input[type=range]{width:100%;accent-color:var(--green)}
         </div>
       </div>
       <button class="btn primary block" id="enviar" disabled>Enviar para a fila de impressão</button>
+      <button class="btn block" id="cancelEd" type="button" hidden>Cancelar edição</button>
       <p class="hint" id="cadHint">Falta a foto e o nome.</p>
     </div>
     <div class="panel">
@@ -295,12 +297,20 @@ input[type=range]{width:100%;accent-color:var(--green)}
           <label class="color"><input type="color" id="k_text" data-k="colors.text"> Texto</label>
         </div>
 
-        <h2>Logo</h2>
+        <h2>Imagens</h2>
         <div class="row">
-          <label class="btn small file-btn">Enviar logo (PNG)<input id="logoIn" type="file" accept="image/*"></label>
-          <button class="btn small" id="logoRm" type="button">Usar logo genérico</button>
-          <span class="hint" id="logoTxt">Usando logo genérico.</span>
+          <span class="lbl" style="flex:0 0 120px;margin:0">Logo</span>
+          <label class="btn small file-btn">Enviar logo<input id="logoIn" type="file" accept="image/*"></label>
+          <button class="btn small" id="logoRm" type="button">Remover</button>
+          <span class="hint" id="logoTxt">Sem logo.</span>
         </div>
+        <div class="row">
+          <span class="lbl" style="flex:0 0 120px;margin:0">Digital</span>
+          <label class="btn small file-btn">Enviar imagem<input id="fingerIn" type="file" accept="image/*"></label>
+          <button class="btn small" id="fingerRm" type="button">Usar a padrão</button>
+          <span class="hint" id="fingerTxt">Digital com cruz padrão.</span>
+        </div>
+        <p class="hint">Prefira PNG com fundo transparente. Sem logo, a prévia mostra “Seu logo aqui”, e na impressão o espaço fica em branco.</p>
 
         <h2>Frente</h2>
         <div class="fields">
@@ -348,7 +358,7 @@ input[type=range]{width:100%;accent-color:var(--green)}
         <button class="btn" id="descartar" disabled>Descartar alterações</button>
         <button class="btn" id="padrao">Restaurar padrão</button>
       </div>
-      <p class="hint" id="modMsg">O modelo fica salvo neste aparelho e vale para os próximos RGs.</p>
+      <p class="hint" id="modMsg">O modelo vale para todos os RGs que ainda não foram impressos, inclusive os que já estão na fila. Os celulares conectados recebem o modelo novo ao salvar.</p>
     </div>
   </section>
 </div>
@@ -378,7 +388,8 @@ const DEF = {
     ],
     sign:"Jesus Cristo", signLabel:"ASSINATURA DO DIRETOR", footer:"" },
   scale:{header:1,verse:1,fields:1,sign:1,photo:1},
-  logo:null
+  logo:null,
+  fingerImg:null
 };
 const clone = o => JSON.parse(JSON.stringify(o));
 function merge(d, v){
@@ -456,6 +467,9 @@ function pill(ctx, c, text, x, y, w, h, s){
 }
 function drawLogo(ctx, c, x, y, s){
   if (c._logoImg){ const im=c._logoImg; const k=Math.min(s/im.width, s/im.height); const w=im.width*k, h=im.height*k; ctx.drawImage(im, x+(s-w)/2, y+(s-h)/2, w, h); return; }
+  if (c._print) return;
+  ctx.save(); rr(ctx,x,y,s,s,s*0.12); ctx.setLineDash([s*0.07,s*0.05]); ctx.lineWidth=s*0.025; ctx.strokeStyle=hexA(c.colors.label,0.8); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=c.colors.label; const r=fit(ctx,"SEU LOGO AQUI",FONT_UPB,s*0.8,s*0.8,s*0.24,s*0.08,1.0); drawFit(ctx,r,x+s*0.1,y+s*0.1,s*0.8,s*0.8,"center","middle"); ctx.restore(); return;
   const cx=x+s/2, cy=y+s/2, cols=["#2f9a48","#f0bf2c","#d6402a","#2a2a2a"];
   for (let i=0;i<4;i++){ ctx.save(); ctx.translate(cx,cy); ctx.rotate(i*Math.PI/2 - Math.PI/4);
     ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(s*0.42,-s*0.22,s*0.48,0); ctx.quadraticCurveTo(s*0.2,s*0.06,0,0); ctx.fillStyle=cols[i]; ctx.fill(); ctx.restore(); }
@@ -471,7 +485,8 @@ function drawPhoto(ctx, c, img, x, y, w, h, u){
   ctx.restore();
   rr(ctx,x,y,w,h,0.9*u); ctx.strokeStyle=hexA(c.colors.text,0.25); ctx.lineWidth=0.15*u; ctx.stroke();
 }
-function drawFinger(ctx, x, y, w, h, u){
+function drawFinger(ctx, x, y, w, h, u, c){
+  if (c && c._fingerImg){ const im=c._fingerImg, k=Math.min(w/im.width,h/im.height), dw=im.width*k, dh=im.height*k; ctx.drawImage(im, x+(w-dw)/2, y+(h-dh)/2, dw, dh); return; }
   rr(ctx,x,y,w,h,0.8*u); ctx.fillStyle="#ffffff"; ctx.fill();
   const cx=x+w/2, cy=y+h*0.52, rx=w*0.40, ry=h*0.42;
   ctx.save(); ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); ctx.clip();
@@ -509,7 +524,7 @@ function drawFront(ctx, c, d){
   const used=drawFit(ctx, vr, rx, iy0, vw, vh);
   if (c.front.ref){ const rr2=fit(ctx, c.front.ref.toUpperCase(), FONT_UPB, vw, 3*u, Math.max(vr.size*1.05,1.6*u), 0.9*u); drawFit(ctx, rr2, rx, iy0+used+0.5*u, vw, 3*u); }
   let sx=rx;
-  if (c.front.finger){ const fw=Math.min(rw*0.3, 11.5*u), fh=Math.min(fw*1.22, ih*0.48); drawFinger(ctx, rx, iy1-fh, fw, fh, u); sx=rx+fw+2*u; }
+  if (c.front.finger){ const fw=Math.min(rw*0.3, 11.5*u), fh=Math.min(fw*1.22, ih*0.48); drawFinger(ctx, rx, iy1-fh, fw, fh, u, c); sx=rx+fw+2*u; }
   const sw=ix1-sx, lineY=iy1-2.6*u;
   const sig=fill(d.genero==="M"?c.front.signM:c.front.signF, d);
   ctx.fillStyle=col.text;
@@ -604,6 +619,7 @@ function makeIdbStore(d){
     async update(id, patch){ const cur=await idbDo(d,"rgs","readonly",s=>s.get(id)); if(!cur) return; await idbDo(d,"rgs","readwrite",s=>s.put({...cur,...patch},id)); emitQ(); },
     async remove(id){ await idbDo(d,"rgs","readwrite",s=>s.delete(id)); await idbDo(d,"fotos","readwrite",s=>s.delete(id)); emitQ(); },
     async getFoto(id){ return await idbDo(d,"fotos","readonly",s=>s.get(id)); },
+    async setFoto(id, foto){ await idbDo(d,"fotos","readwrite",s=>s.put(foto,id)); emitQ(); },
     async saveConfig(c){ await idbDo(d,"conf","readwrite",s=>s.put(c,"modelo")); cs.forEach(f=>f(c)); }
   };
 }
@@ -613,7 +629,7 @@ function makeMemStore(){
   return { mode:"mem", onQueue(f){ qs.add(f); setTimeout(emitQ,0); }, onConfig(f){ cs.add(f); setTimeout(()=>f(conf),0); },
     async add(rg,foto,id){ id=id||("rg"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)); fotos[id]=foto; rgs[id]={...rg,id,foto:id}; emitQ(); return id; },
     async update(id,p){ if(rgs[id]) rgs[id]={...rgs[id],...p}; emitQ(); }, async remove(id){ delete rgs[id]; delete fotos[id]; emitQ(); },
-    async getFoto(id){ return fotos[id]; }, async saveConfig(c){ conf=c; cs.forEach(f=>f(c)); } };
+    async getFoto(id){ return fotos[id]; }, async setFoto(id,f){ fotos[id]=f; emitQ(); }, async saveConfig(c){ conf=c; cs.forEach(f=>f(c)); } };
 }
 
 /* ---------- estado ---------- */
@@ -622,7 +638,8 @@ let queue = [], filter = "fila", selected = new Set(), lastPrinted = [];
 const $ = s => document.querySelector(s);
 const imgCache = new Map();
 function loadImg(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
-async function attachLogo(c){ if (c.logo){ try{ c._logoImg = imgCache.get(c.logo) || await loadImg(c.logo); imgCache.set(c.logo,c._logoImg); }catch(e){ c._logoImg=null; } } else c._logoImg=null; return c; }
+async function loadCached(src){ if (!src) return null; try{ const i=imgCache.get(src) || await loadImg(src); imgCache.set(src,i); return i; }catch(e){ return null; } }
+async function attachLogo(c){ c._logoImg = await loadCached(c.logo); c._fingerImg = await loadCached(c.fingerImg); return c; }
 function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),2600); }
 function setStatus(ok, m){ $("#sdot").classList.toggle("ok", ok); $("#stxt").textContent=m; }
 function errMsg(e){
@@ -659,19 +676,39 @@ async function onFile(file){
     const url=URL.createObjectURL(file); const im=await loadImg(url);
     const k=Math.min(1, 1800/Math.max(im.width,im.height)); const cv=document.createElement("canvas"); cv.width=Math.round(im.width*k); cv.height=Math.round(im.height*k);
     cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height); URL.revokeObjectURL(url);
-    crop.img=cv; crop.zoom=1; crop.ox=0; crop.oy=0; crop.rot=0; $("#zoom").value=1;
+    crop.img=cv; crop.rot=0;
     $("#cropEmpty").hidden=true; $("#guide").hidden=false; $("#cropCtl").hidden=false;
-    drawCrop(); updateCad();
+    await autoFrame(); drawCrop(); updateCad();
   }catch(e){ toast("Não consegui abrir essa imagem. Tente outra foto."); }
 }
 $("#fCam").addEventListener("change",e=>{ onFile(e.target.files[0]); e.target.value=""; });
 $("#fGal").addEventListener("change",e=>{ onFile(e.target.files[0]); e.target.value=""; });
 $("#zoom").addEventListener("input",e=>{ crop.zoom=+e.target.value; drawCrop(); schedCad(); });
 $("#rot").addEventListener("click",()=>{ crop.rot=(crop.rot+90)%360; crop.ox=crop.oy=0; drawCrop(); schedCad(); });
-let drag=null;
-cropC.addEventListener("pointerdown",e=>{ if(!crop.img) return; drag={x:e.clientX,y:e.clientY,ox:crop.ox,oy:crop.oy}; cropC.setPointerCapture(e.pointerId); });
-cropC.addEventListener("pointermove",e=>{ if(!drag) return; const k=600/cropC.clientWidth; crop.ox=drag.ox+(e.clientX-drag.x)*k; crop.oy=drag.oy+(e.clientY-drag.y)*k; drawCrop(); schedCad(); });
-["pointerup","pointercancel"].forEach(ev=>cropC.addEventListener(ev,()=>{ drag=null; }));
+async function autoFrame(fresh=true){
+  crop.ox=0; crop.oy=0;
+  const [iw,ih]=srcDims(), base0=Math.max(600/iw,800/ih);
+  let face=null;
+  try{ if ("FaceDetector" in window && crop.rot===0){ const fs=await new FaceDetector({fastMode:true,maxDetectedFaces:1}).detect(crop.img); if (fs && fs[0]) face=fs[0].boundingBox; } }catch(e){}
+  if (face){
+    const z=Math.min(4,Math.max(1,(600*0.46)/(face.width*base0))); crop.zoom=z; const base=base0*z;
+    crop.ox=-((face.x+face.width/2)-iw/2)*base; crop.oy=(800*0.40-400)-((face.y+face.height/2)-ih/2)*base;
+  } else if (fresh){
+    crop.zoom=1.7; const dh=ih*base0*1.7; crop.oy=(dh-800)/2*0.55;
+  } else crop.zoom=1;
+  $("#zoom").value=crop.zoom;
+}
+function setZoom(z){ crop.zoom=Math.max(1,Math.min(4,z)); $("#zoom").value=crop.zoom; drawCrop(); schedCad(); }
+$("#autoAj").addEventListener("click", async ()=>{ await autoFrame(true); drawCrop(); schedCad(); });
+let drag=null, pinch=null; const pts=new Map();
+const pdist=()=>{ const [a,b]=[...pts.values()]; return Math.hypot(a.x-b.x,a.y-b.y)||1; };
+cropC.addEventListener("pointerdown",e=>{ if(!crop.img) return; cropC.setPointerCapture(e.pointerId); pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if (pts.size===2){ pinch={d:pdist(), z:crop.zoom}; drag=null; } else if (pts.size===1) drag={x:e.clientX,y:e.clientY,ox:crop.ox,oy:crop.oy}; });
+cropC.addEventListener("pointermove",e=>{ if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if (pinch && pts.size===2){ setZoom(pinch.z*pdist()/pinch.d); return; }
+  if (!drag) return; const k=600/cropC.clientWidth; crop.ox=drag.ox+(e.clientX-drag.x)*k; crop.oy=drag.oy+(e.clientY-drag.y)*k; drawCrop(); schedCad(); });
+["pointerup","pointercancel"].forEach(ev=>cropC.addEventListener(ev,e=>{ pts.delete(e.pointerId); if (pts.size<2) pinch=null; if (pts.size===1){ const [p]=[...pts.values()]; drag={x:p.x,y:p.y,ox:crop.ox,oy:crop.oy}; } else drag=null; }));
+cropC.addEventListener("wheel",e=>{ if(!crop.img) return; e.preventDefault(); setZoom(crop.zoom*(e.deltaY<0?1.08:1/1.08)); },{passive:false});
 
 let genero="F";
 $("#gF").addEventListener("click",()=>{ genero="F"; updateCad(); });
@@ -696,17 +733,40 @@ function exportFoto(){
   if (url.length>230000){ const s=document.createElement("canvas"); s.width=420; s.height=560; s.getContext("2d").drawImage(cropC,0,0,420,560); url=s.toDataURL("image/jpeg",0.75); }
   return url;
 }
+let editingId=null;
+function limparCad(){
+  crop.img=null; drawCrop(); $("#cropEmpty").hidden=false; $("#guide").hidden=true; $("#cropCtl").hidden=true;
+  $("#nome").value=""; genero="F"; editingId=null; $("#cancelEd").hidden=true; $("#enviar").textContent="Enviar para a fila de impressão";
+}
+async function editarFoto(r){
+  try{
+    const src=await store.getFoto(r.foto||r.id); if(!src){ toast("Foto não encontrada"); return; }
+    const im=await loadImg(src); const cv=document.createElement("canvas"); cv.width=im.width; cv.height=im.height; cv.getContext("2d").drawImage(im,0,0);
+    showTab("cad"); crop.img=cv; crop.rot=0; crop.zoom=1; crop.ox=0; crop.oy=0; $("#zoom").value=1;
+    await autoFrame(false);
+    $("#cropEmpty").hidden=true; $("#guide").hidden=false; $("#cropCtl").hidden=false;
+    $("#nome").value=r.nome||""; genero=r.genero==="M"?"M":"F"; editingId=r.id;
+    $("#cancelEd").hidden=false; $("#enviar").textContent="Salvar alterações";
+    drawCrop(); updateCad(); window.scrollTo({top:0,behavior:"smooth"});
+  }catch(e){ toast("Não consegui abrir a foto"); }
+}
+$("#cancelEd").addEventListener("click",()=>{ limparCad(); updateCad(); showTab("fila"); });
 $("#enviar").addEventListener("click", async ()=>{
   const nome=$("#nome").value.trim(); if (!nome || !crop.img || !store) return;
-  const btn=$("#enviar"); btn.disabled=true; btn.textContent="Enviando…";
+  const btn=$("#enviar"); btn.disabled=true; btn.textContent= editingId ? "Salvando…" : "Enviando…";
+  if (editingId){
+    try{ await store.setFoto(editingId, exportFoto()); await store.update(editingId,{nome, genero, enviado:false}); toast(`${nome} atualizado`);
+      if (pcId) flushPending(); limparCad(); showTab("fila"); }
+    catch(e){ toast(errMsg(e)); btn.textContent="Salvar alterações"; }
+    updateCad(); return;
+  }
   try{
     await store.add({nome, genero, status:"fila", criado:Date.now()}, exportFoto());
     if (pcId){ toast(pcConn && pcConn.open ? `Enviando ${nome} ao computador…` : `${nome} salvo. Vai para o computador quando conectar.`); flushPending(); }
     else toast(`${nome} está na fila`);
-    crop.img=null; drawCrop(); $("#cropEmpty").hidden=false; $("#guide").hidden=true; $("#cropCtl").hidden=true;
-    $("#nome").value=""; genero="F";
+    limparCad();
   }catch(e){ toast(errMsg(e)); }
-  btn.textContent="Enviar para a fila de impressão"; updateCad();
+  if (!editingId) btn.textContent="Enviar para a fila de impressão"; updateCad();
 });
 
 /* ---------- fila ---------- */
@@ -747,7 +807,8 @@ function renderFila(){
         <div class="meta"><span class="pill ${st==="fila"?"wait":"done"}">${st==="fila"?"Aguardando":"Impresso"}</span><span>${r.genero==="M"?"Menino":"Menina"}</span><span>${fmtHora(r.criado)}</span>${pcId?`<span>${r.enviado?"✓ no computador":"ainda não enviado"}</span>`:""}</div></div>
       <div class="acts">
         <button class="btn small" data-a="ver">${openRows.has(r.id)?"Fechar":"Ver"}</button>
-        <button class="btn small" data-a="edit">Editar</button>
+        <button class="btn small" data-a="foto">Ajustar foto</button>
+        <button class="btn small" data-a="edit">Editar nome</button>
         ${st==="impresso"?'<button class="btn small" data-a="refila">Voltar para fila</button>':""}
         ${confirmDel.has(r.id)?'<button class="btn small danger" data-a="delok">Confirmar exclusão</button><button class="btn small" data-a="delno">Cancelar</button>':'<button class="btn small danger" data-a="del">Excluir</button>'}
       </div>`;
@@ -770,6 +831,7 @@ function renderFila(){
     el.querySelectorAll(".acts [data-a]").forEach(b=>b.addEventListener("click", async ()=>{
       const a=b.dataset.a;
       if (a==="ver") openRows.has(r.id)?openRows.delete(r.id):openRows.add(r.id);
+      if (a==="foto"){ editarFoto(r); return; }
       if (a==="edit") editRows.has(r.id)?editRows.delete(r.id):editRows.add(r.id);
       if (a==="del") confirmDel.add(r.id);
       if (a==="delno") confirmDel.delete(r.id);
@@ -783,6 +845,10 @@ function renderFila(){
 function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
 async function renderPages(items, onProg){
+  cfg._print=true;
+  try{ return await renderPagesInner(items, onProg); } finally { cfg._print=false; }
+}
+async function renderPagesInner(items, onProg){
   const L=layoutA4(cfg), S=11.811, W=cfg.card.w;
   const fc=document.createElement("canvas"), bc=document.createElement("canvas"), pair=document.createElement("canvas"), rotc=document.createElement("canvas");
   const pages=[]; let pg=null, pctx=null;
@@ -890,8 +956,10 @@ const formInputs=[...document.querySelectorAll("#modForm [data-k]")];
 function fillForm(){
   formInputs.forEach(el=>{ const v=getK(draft, el.dataset.k); if (el.type==="checkbox") el.checked=!!v; else el.value=v??""; el.disabled=!canEditModel; });
   renderBFields();
-  $("#logoTxt").textContent = draft.logo ? "Logo enviado." : "Usando logo genérico.";
+  $("#logoTxt").textContent = draft.logo ? "Logo enviado." : "Sem logo.";
   $("#logoIn").disabled = !canEditModel; $("#logoRm").disabled = !canEditModel || !draft.logo;
+  $("#fingerTxt").textContent = draft.fingerImg ? "Imagem enviada." : "Digital com cruz padrão.";
+  $("#fingerIn").disabled = !canEditModel; $("#fingerRm").disabled = !canEditModel || !draft.fingerImg;
   $("#padrao").disabled = !canEditModel; $("#addField").disabled = !canEditModel;
   document.querySelectorAll("[data-preset]").forEach(b=>b.disabled=!canEditModel);
   $("#modRO").hidden = canEditModel;
@@ -922,15 +990,22 @@ formInputs.forEach(el=>el.addEventListener(el.type==="checkbox"||el.type==="colo
   setK(draft, el.dataset.k, v); touched();
 }));
 document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{ const [w,h]=b.dataset.preset.split("x").map(Number); draft.card.w=w; draft.card.h=h; $("#c_w").value=w; $("#c_h").value=h; touched(); }));
-$("#logoIn").addEventListener("change", async e=>{
-  const f=e.target.files[0]; e.target.value=""; if(!f) return;
-  try{ const url=URL.createObjectURL(f); const im=await loadImg(url); const k=Math.min(1,420/Math.max(im.width,im.height));
-    const cv=document.createElement("canvas"); cv.width=Math.round(im.width*k); cv.height=Math.round(im.height*k); cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height); URL.revokeObjectURL(url);
-    let data=cv.toDataURL("image/png"); if (data.length>200000) data=cv.toDataURL("image/webp",0.9); if (data.length>200000) { toast("Logo muito pesado. Use uma imagem menor."); return; }
-    draft.logo=data; await attachLogo(draft); $("#logoTxt").textContent="Logo enviado."; $("#logoRm").disabled=false; touched();
-  }catch(err){ toast("Não consegui abrir esse logo."); }
-});
-$("#logoRm").addEventListener("click",()=>{ draft.logo=null; draft._logoImg=null; $("#logoTxt").textContent="Usando logo genérico."; $("#logoRm").disabled=true; touched(); });
+async function lerImagem(f, max){
+  const url=URL.createObjectURL(f); const im=await loadImg(url); const k=Math.min(1,max/Math.max(im.width,im.height));
+  const cv=document.createElement("canvas"); cv.width=Math.round(im.width*k); cv.height=Math.round(im.height*k); cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height); URL.revokeObjectURL(url);
+  let data=cv.toDataURL("image/png"); if (data.length>300000) data=cv.toDataURL("image/webp",0.9); if (data.length>300000) data=cv.toDataURL("image/jpeg",0.85);
+  return data;
+}
+function uploader(inSel, rmSel, key, txtSel, okTxt, noTxt){
+  $(inSel).addEventListener("change", async e=>{
+    const f=e.target.files[0]; e.target.value=""; if(!f) return;
+    try{ draft[key]=await lerImagem(f, 500); await attachLogo(draft); $(txtSel).textContent=okTxt; $(rmSel).disabled=false; touched(); }
+    catch(err){ toast("Não consegui abrir essa imagem."); }
+  });
+  $(rmSel).addEventListener("click", async ()=>{ draft[key]=null; await attachLogo(draft); $(txtSel).textContent=noTxt; $(rmSel).disabled=true; touched(); });
+}
+uploader("#logoIn","#logoRm","logo","#logoTxt","Logo enviado.","Sem logo.");
+uploader("#fingerIn","#fingerRm","fingerImg","#fingerTxt","Imagem enviada.","Digital com cruz padrão.");
 function touched(){ dirty=true; syncModButtons(); schedMod(); }
 function syncModButtons(){
   $("#salvar").disabled = !dirty || !canEditModel || !store; $("#descartar").disabled = !dirty;
@@ -943,7 +1018,7 @@ function renderModPreview(){
   const d={nome:"Olivia", genero:"F", foto:null};
   previewTo($("#mvF"),"F",draft,d); previewTo($("#mvB"),"B",draft,d);
 }
-function plainCfg(c){ const o=clone({...c, _logoImg:undefined}); delete o._logoImg; return o; }
+function plainCfg(c){ const o={...c}; delete o._logoImg; delete o._fingerImg; delete o._print; return clone(o); }
 $("#salvar").addEventListener("click", async ()=>{
   const b=$("#salvar"); b.disabled=true; b.textContent="Salvando…";
   try{ await store.saveConfig(plainCfg(draft)); dirty=false; cfg=await attachLogo(merge(DEF, plainCfg(draft))); toast("Modelo salvo"); broadcastModelo(); $("#modMsg").textContent="Modelo salvo neste aparelho. Para levar a outro aparelho, use Exportar fila."; }
@@ -983,7 +1058,9 @@ function startReceiver(){
     c.on("open",()=>{ conns.add(c); c.send({tipo:"modelo", modelo:plainCfg(cfg)}); setPair(true,`${conns.size} celular${conns.size>1?"es":""} conectado${conns.size>1?"s":""}`); toast("Celular conectado"); });
     c.on("data", async m=>{
       if (!m || m.tipo!=="rg" || !m.id) return;
-      try{ if (!queue.some(r=>r.id===m.id)){ await store.add({nome:String(m.nome||"").slice(0,40), genero:m.genero==="M"?"M":"F", status:"fila", criado:m.criado||Date.now()}, m.img, m.id); toast(`${m.nome} chegou do celular`); }
+      try{ const nm=String(m.nome||"").slice(0,40), g=m.genero==="M"?"M":"F";
+           if (!queue.some(r=>r.id===m.id)){ await store.add({nome:nm, genero:g, status:"fila", criado:m.criado||Date.now()}, m.img, m.id); toast(`${nm} chegou do celular`); }
+           else { if (m.img) await store.setFoto(m.id, m.img); await store.update(m.id,{nome:nm, genero:g}); toast(`${nm} foi atualizado pelo celular`); }
            c.send({tipo:"ok", id:m.id}); }catch(e){ try{ c.send({tipo:"erro", id:m.id}); }catch(_){} }
     });
     c.on("close",()=>{ conns.delete(c); setPair(true, conns.size?`${conns.size} conectado${conns.size>1?"s":""}`:"Aguardando celular"); });
