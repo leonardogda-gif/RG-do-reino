@@ -138,6 +138,13 @@ input[type=range]{width:100%;accent-color:var(--green)}
 .qr{width:196px;height:196px;padding:8px;background:#fff;border-radius:10px;border:1px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;color:#5b6a5e;font-size:12px;text-align:center}
 .qr img,.qr canvas{display:block;width:180px;height:180px}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-all}
+.savebar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15;width:min(680px,calc(100% - 32px));display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(10,30,15,.18),0 2px 6px rgba(10,30,15,.10);animation:sbIn .2s ease-out}
+.savebar .sb-txt{display:flex;flex-direction:column;min-width:0;font-size:13px;color:var(--muted)}
+.savebar .sb-txt b{color:var(--ink);font-size:14.5px}
+.savebar .sb-acts{display:flex;gap:8px;margin-left:auto}
+@keyframes sbIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+body.has-savebar .wrap{padding-bottom:120px}
+body.has-savebar .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 #printArea{display:none}
 @media print{
   body{background:#fff!important}
@@ -354,13 +361,15 @@ input[type=range]{width:100%;accent-color:var(--green)}
         <span class="cap">Verso</span><canvas id="mvB"></canvas>
       </div>
       <div class="row">
-        <button class="btn primary" id="salvar" disabled>Salvar modelo</button>
-        <button class="btn" id="descartar" disabled>Descartar alterações</button>
         <button class="btn" id="padrao">Restaurar padrão</button>
       </div>
       <p class="hint" id="modMsg">O modelo vale para todos os RGs que ainda não foram impressos, inclusive os que já estão na fila. Os celulares conectados recebem o modelo novo ao salvar.</p>
     </div>
   </section>
+</div>
+<div class="savebar" id="saveBar" hidden role="region" aria-label="Salvar modelo">
+  <div class="sb-txt"><b>Alterações não salvas</b><span id="sbSub">A prévia já mostra o resultado.</span></div>
+  <div class="sb-acts"><button class="btn" id="descartar">Descartar</button><button class="btn primary" id="salvar">Salvar modelo</button></div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 <div id="printArea"></div>
@@ -654,6 +663,7 @@ function showTab(t){
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===t));
   $("#view-cad").hidden = t!=="cad"; $("#view-fila").hidden = t!=="fila"; $("#view-mod").hidden = t!=="mod";
   try{ localStorage.setItem("rg_tab", t); }catch(e){}
+  syncModButtons();
   requestAnimationFrame(()=>{ if (t==="cad") renderCadPreview(); if (t==="mod") renderModPreview(); if (t==="fila") renderFila(); });
 }
 
@@ -1009,6 +1019,7 @@ uploader("#fingerIn","#fingerRm","fingerImg","#fingerTxt","Imagem enviada.","Dig
 function touched(){ dirty=true; syncModButtons(); schedMod(); }
 function syncModButtons(){
   $("#salvar").disabled = !dirty || !canEditModel || !store; $("#descartar").disabled = !dirty;
+  const show = dirty && !$("#view-mod").hidden; $("#saveBar").hidden = !show; document.body.classList.toggle("has-savebar", show);
   const L=layoutA4(draft);
   $("#modFit").textContent = L ? `Com essas medidas cabem ${L.per} RGs (frente + verso) por folha A4.` : "Esse tamanho não cabe numa folha A4 com frente e verso lado a lado.";
 }
